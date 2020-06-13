@@ -79,9 +79,10 @@ createTestApplication(VirtualClock& clock, Config const& cfg, Args&&... args,
     return app;
 }
 
-time_t getTestDate(int day, int month, int year);
-std::tm getTestDateTime(int day, int month, int year, int hour, int minute,
-                        int second);
+time_t getTestDateTime(int day, int month, int year, int hour = 0,
+                       int minute = 0, int second = 0);
+std::tm getTestDateTimeStruct(int day, int month, int year, int hour,
+                              int minute, int second);
 
 VirtualClock::system_time_point genesis(int minute, int second);
 }

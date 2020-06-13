@@ -19,6 +19,10 @@
 *.suo
 *.trs
 *.db
+*.xdr.gz
+stellar-core-test-*
+*history*.json
+test-*.txt
 
 # sourcetrail
 compile_commands.json
@@ -49,6 +53,7 @@ compile_commands.json
 /build
 /src/stellar-core
 /buckets
+/src/buckets
 /compile
 /config.h
 /config.h.in

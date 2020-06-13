@@ -904,7 +904,7 @@ TEST_CASE("claimableBalance", "[tx][claimablebalance]")
                         // use closeLedger so we can apply a multi op tx and get
                         // the fee charged
                         closeLedgerOn(*app, lm.getLastClosedLedgerNum() + 1, 2,
-                                      1, 2016, {tx});
+                                      1, 2016, 0, 0, 0, {tx});
                     }
                     else
                     {

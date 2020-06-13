@@ -633,7 +633,7 @@ TEST_CASE("txenvelope", "[tx][envelope]")
                             REQUIRE(getAccountSigners(root, *app).size() == 1);
 
                             // merge b1 into a1 and attempt the payment tx
-                            auto r = closeLedgerOn(*app, 3, 1, 2, 2016,
+                            auto r = closeLedgerOn(*app, 3, 1, 2, 2016, 0, 0, 0,
                                                    {txMerge, tx});
 
                             if (txAccountMissing)
@@ -940,12 +940,14 @@ TEST_CASE("txenvelope", "[tx][envelope]")
                         };
                         for_versions(3, 9, *app, [&] {
                             setup();
-                            closeLedgerOn(*app, 2, 1, 1, 2010, {tx1, tx2});
+                            closeLedgerOn(*app, 2, 1, 1, 2010, 0, 0, 0,
+                                          {tx1, tx2});
                             REQUIRE(getAccountSigners(root, *app).size() == 1);
                         });
                         for_versions_from(10, *app, [&] {
                             setup();
-                            closeLedgerOn(*app, 2, 1, 1, 2010, {tx1, tx2});
+                            closeLedgerOn(*app, 2, 1, 1, 2010, 0, 0, 0,
+                                          {tx1, tx2});
                             REQUIRE(getAccountSigners(root, *app).size() ==
                                     (alternative.autoRemove ? 0 : 1));
                         });
@@ -971,12 +973,14 @@ TEST_CASE("txenvelope", "[tx][envelope]")
                         };
                         for_versions(3, 9, *app, [&] {
                             setup();
-                            closeLedgerOn(*app, 2, 1, 1, 2010, {tx1, tx2});
+                            closeLedgerOn(*app, 2, 1, 1, 2010, 0, 0, 0,
+                                          {tx1, tx2});
                             REQUIRE(getAccountSigners(root, *app).size() == 1);
                         });
                         for_versions_from(10, *app, [&] {
                             setup();
-                            closeLedgerOn(*app, 2, 1, 1, 2010, {tx1, tx2});
+                            closeLedgerOn(*app, 2, 1, 1, 2010, 0, 0, 0,
+                                          {tx1, tx2});
                             REQUIRE(getAccountSigners(root, *app).size() ==
                                     (alternative.autoRemove ? 0 : 1));
                         });
@@ -1544,7 +1548,7 @@ TEST_CASE("txenvelope", "[tx][envelope]")
                     // tx ok
                     // tx too old
                     VirtualClock::system_time_point ledgerTime;
-                    time_t start = getTestDate(1, 7, 2014);
+                    time_t start = getTestDateTime(1, 7, 2014);
                     ledgerTime = VirtualClock::from_time_t(start);
 
                     clock.setCurrentVirtualTime(ledgerTime);

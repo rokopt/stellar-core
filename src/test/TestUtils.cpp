@@ -100,18 +100,15 @@ TestApplication::createInvariantManager()
 }
 
 time_t
-getTestDate(int day, int month, int year)
+getTestDateTime(int day, int month, int year, int hour, int minute, int second)
 {
-    auto tm = getTestDateTime(day, month, year, 0, 0, 0);
-
-    VirtualClock::system_time_point tp = VirtualClock::tmToSystemPoint(tm);
-    time_t t = VirtualClock::to_time_t(tp);
-
-    return t;
+    auto tm = getTestDateTimeStruct(day, month, year, hour, minute, second);
+    return VirtualClock::tmToSystemTimeT(tm);
 }
 
 std::tm
-getTestDateTime(int day, int month, int year, int hour, int minute, int second)
+getTestDateTimeStruct(int day, int month, int year, int hour, int minute,
+                      int second)
 {
     std::tm tm = {0};
     tm.tm_hour = hour;
@@ -127,6 +124,6 @@ VirtualClock::system_time_point
 genesis(int minute, int second)
 {
     return VirtualClock::tmToSystemPoint(
-        getTestDateTime(1, 7, 2014, 0, minute, second));
+        getTestDateTimeStruct(1, 7, 2014, 0, minute, second));
 }
 }
