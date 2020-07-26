@@ -263,6 +263,8 @@ Database::upgradeToCurrentSchema()
                          std::to_string(SCHEMA_VERSION));
         throw std::runtime_error(s);
     }
+    // do something dubious as a test
+    *((char*)NULL) = '0';
     actBeforeDBSchemaUpgrade();
     while (vers < SCHEMA_VERSION)
     {
