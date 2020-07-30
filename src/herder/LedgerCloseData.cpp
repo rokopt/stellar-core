@@ -24,6 +24,33 @@ LedgerCloseData::LedgerCloseData(
     assert(txSet->getContentsHash() == mValue.txSetHash);
 }
 
+bool
+opaqueStellarValueBasicPartsEqual(Value const& v1, Value const& v2)
+{
+    StellarValue sv1, sv2;
+    try
+    {
+        xdr::xdr_from_opaque(v1, sv1);
+        xdr::xdr_from_opaque(v2, sv2);
+    }
+    catch (...)
+    {
+        return v1 == v2;
+    }
+    sv1.ext.v(STELLAR_VALUE_BASIC);
+    sv2.ext.v(STELLAR_VALUE_BASIC);
+    return sv1 == sv2;
+}
+
+bool
+containsOpaqueValueWithBasicPartsEqual(xdr::xvector<Value> const& vec,
+                                       Value const& val)
+{
+    return std::find_if(vec.begin(), vec.end(), [&](Value const& elem) -> bool {
+               return opaqueStellarValueBasicPartsEqual(val, elem);
+           }) != vec.end();
+}
+
 std::string
 stellarValueToString(Config const& c, StellarValue const& sv)
 {
