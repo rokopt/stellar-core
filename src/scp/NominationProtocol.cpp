@@ -7,6 +7,7 @@
 #include "Slot.h"
 #include "crypto/Hex.h"
 #include "crypto/SHA.h"
+#include "herder/LedgerCloseData.h"
 #include "lib/json/json.h"
 #include "scp/LocalNode.h"
 #include "scp/QuorumSetUtils.h"
@@ -377,11 +378,8 @@ NominationProtocol::processEnvelope(SCPEnvelopeWrapperPtr envelope)
             }
             if (mSlot.federatedAccept(
                     [&v](SCPStatement const& st) -> bool {
-                        auto const& nom = st.pledges.nominate();
-                        bool res;
-                        res = (std::find(nom.votes.begin(), nom.votes.end(),
-                                         v) != nom.votes.end());
-                        return res;
+                        return containsOpaqueValueWithBasicPartsEqual(
+                            st.pledges.nominate().votes, v);
                     },
                     std::bind(&NominationProtocol::acceptPredicate, v, _1),
                     mLatestNominations))
