@@ -53,6 +53,8 @@ bool opaqueStellarValueBasicPartsEqual(Value const& v1, Value const& v2);
 bool containsOpaqueValueWithBasicPartsEqual(xdr::xvector<Value> const& vec,
                                             Value const& val);
 
+std::string opaqueStellarValueToString(Value const& v);
+
 std::string stellarValueToString(Config const& c, StellarValue const& sv);
 
 #define emptyUpgradeSteps (xdr::xvector<UpgradeType, 6>(0))

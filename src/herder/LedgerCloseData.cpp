@@ -5,8 +5,10 @@
 #include "main/Application.h"
 #include "util/Logging.h"
 #include "util/XDROperators.h"
+#include <fmt/format.h>
 #include <overlay/OverlayManager.h>
 #include <xdrpp/marshal.h>
+#include <xdrpp/printer.h>
 
 using namespace std;
 
@@ -49,6 +51,21 @@ containsOpaqueValueWithBasicPartsEqual(xdr::xvector<Value> const& vec,
     return std::find_if(vec.begin(), vec.end(), [&](Value const& elem) -> bool {
                return opaqueStellarValueBasicPartsEqual(val, elem);
            }) != vec.end();
+}
+
+std::string
+opaqueStellarValueToString(Value const& v)
+{
+    StellarValue sv;
+    try
+    {
+        xdr::xdr_from_opaque(v, sv);
+    }
+    catch (...)
+    {
+        return fmt::format("<opaque:'{}'>", xdr::xdr_to_string(v));
+    }
+    return xdr::xdr_to_string(sv);
 }
 
 std::string
