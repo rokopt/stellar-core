@@ -378,8 +378,11 @@ NominationProtocol::processEnvelope(SCPEnvelopeWrapperPtr envelope)
             }
             if (mSlot.federatedAccept(
                     [&v](SCPStatement const& st) -> bool {
-                        return containsOpaqueValueWithBasicPartsEqual(
-                            st.pledges.nominate().votes, v);
+                        auto const& nom = st.pledges.nominate();
+                        bool res;
+                        res = (std::find(nom.votes.begin(), nom.votes.end(),
+                                         v) != nom.votes.end());
+                        return res;
                     },
                     std::bind(&NominationProtocol::acceptPredicate, v, _1),
                     mLatestNominations))
@@ -403,6 +406,22 @@ NominationProtocol::processEnvelope(SCPEnvelopeWrapperPtr envelope)
                         {
                             modified = true;
                         }
+                    }
+                }
+            }
+            else if (mSlot.federatedRatify(
+                         [&v](SCPStatement const& st) -> bool {
+                             return containsOpaqueValueWithBasicPartsEqual(
+                                 st.pledges.nominate().votes, v);
+                         },
+                         mLatestNominations))
+            {
+                auto vl = validateValue(v);
+                if (vl == SCPDriver::kFullyValidatedValue)
+                {
+                    if (mVotes.emplace(vw).second)
+                    {
+                        modified = true;
                     }
                 }
             }
