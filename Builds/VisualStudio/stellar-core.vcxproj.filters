@@ -783,6 +783,9 @@
     <ClCompile Include="..\..\src\transactions\test\SignatureUtilsTest.cpp">
       <Filter>transactions\tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\transactions\test\TransactionEvaluatorTests.cpp">
+      <Filter>transactions\tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\transactions\test\TxEnvelopeTests.cpp">
       <Filter>transactions\tests</Filter>
     </ClCompile>
@@ -1018,6 +1021,9 @@
       <Filter>transactions</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\transactions\TransactionBridge.cpp">
+      <Filter>transactions</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\transactions\TransactionEvaluator.cpp">
       <Filter>transactions</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\transactions\TransactionFrameBase.cpp">
@@ -1263,6 +1269,9 @@
       <Filter>xdr\generated</Filter>
     </ClInclude>
     <ClInclude Include="src\generated\xdr\Stellar-transaction.h">
+      <Filter>xdr\generated</Filter>
+    </ClInclude>
+    <ClInclude Include="src\generated\xdr\Stellar-transaction-evaluator.h">
       <Filter>xdr\generated</Filter>
     </ClInclude>
     <ClInclude Include="src\generated\xdr\Stellar-types.h">
@@ -1721,6 +1730,9 @@
     <ClInclude Include="..\..\src\transactions\SignatureUtils.h">
       <Filter>transactions</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\transactions\TransactionEvaluator.h">
+      <Filter>main</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\transactions\TransactionFrame.h">
       <Filter>transactions</Filter>
     </ClInclude>
@@ -2090,6 +2102,9 @@
       <Filter>xdr</Filter>
     </CustomBuild>
     <CustomBuild Include="..\..\src\xdr\Stellar-SCP.x">
+      <Filter>xdr</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\src\xdr\Stellar-transaction-evaluator.x">
       <Filter>xdr</Filter>
     </CustomBuild>
     <CustomBuild Include="..\..\src\main\StellarCoreVersion.cpp.in">
