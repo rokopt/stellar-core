@@ -5,6 +5,7 @@
 // of this distribution or at http://www.apache.org/licenses/LICENSE-2.0
 
 #include "ledger/LedgerHashUtils.h"
+#include "ledger/LedgerTxn.h"
 #include "overlay/StellarXDR.h"
 #include "transactions/TransactionFrame.h"
 #include "util/optional.h"
@@ -51,6 +52,10 @@ class TxSetFrame : public AbstractTxSetFrameForApply
 
     using AccountTransactionQueue = std::deque<TransactionFrameBasePtr>;
 
+    bool checkOrTrim(AbstractLedgerTxnParent& parent,
+                     std::vector<TransactionFrameBasePtr>& trimmed,
+                     bool justCheck, uint64_t lowerBoundCloseTimeOffset,
+                     uint64_t upperBoundCloseTimeOffset);
     bool checkOrTrim(Application& app,
                      std::vector<TransactionFrameBasePtr>& trimmed,
                      bool justCheck, uint64_t lowerBoundCloseTimeOffset,
@@ -87,6 +92,10 @@ class TxSetFrame : public AbstractTxSetFrameForApply
 
     // remove invalid transaction from this set and return those removed
     // transactions
+    std::vector<TransactionFrameBasePtr>
+    trimInvalid(AbstractLedgerTxnParent& parent,
+                uint64_t lowerBoundCloseTimeOffset,
+                uint64_t upperBoundCloseTimeOffset);
     std::vector<TransactionFrameBasePtr>
     trimInvalid(Application& app, uint64_t lowerBoundCloseTimeOffset,
                 uint64_t upperBoundCloseTimeOffset);

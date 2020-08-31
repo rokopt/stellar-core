@@ -299,8 +299,18 @@ TxSetFrame::checkOrTrim(Application& app,
                         bool justCheck, uint64_t lowerBoundCloseTimeOffset,
                         uint64_t upperBoundCloseTimeOffset)
 {
+    return checkOrTrim(app.getLedgerTxnRoot(), trimmed, justCheck,
+                       lowerBoundCloseTimeOffset, upperBoundCloseTimeOffset);
+}
+
+bool
+TxSetFrame::checkOrTrim(AbstractLedgerTxnParent& parent,
+                        std::vector<TransactionFrameBasePtr>& trimmed,
+                        bool justCheck, uint64_t lowerBoundCloseTimeOffset,
+                        uint64_t upperBoundCloseTimeOffset)
+{
     ZoneScoped;
-    LedgerTxn ltx(app.getLedgerTxnRoot());
+    LedgerTxn ltx(parent);
 
     std::unordered_map<AccountID, int64_t> accountFeeMap;
     auto accountTxMap = buildAccountTxQueues();
@@ -384,10 +394,19 @@ std::vector<TransactionFrameBasePtr>
 TxSetFrame::trimInvalid(Application& app, uint64_t lowerBoundCloseTimeOffset,
                         uint64_t upperBoundCloseTimeOffset)
 {
+    return trimInvalid(app.getLedgerTxnRoot(), lowerBoundCloseTimeOffset,
+                       upperBoundCloseTimeOffset);
+}
+
+std::vector<TransactionFrameBasePtr>
+TxSetFrame::trimInvalid(AbstractLedgerTxnParent& parent,
+                        uint64_t lowerBoundCloseTimeOffset,
+                        uint64_t upperBoundCloseTimeOffset)
+{
     ZoneScoped;
     std::vector<TransactionFrameBasePtr> trimmed;
     sortForHash();
-    checkOrTrim(app, trimmed, false, lowerBoundCloseTimeOffset,
+    checkOrTrim(parent, trimmed, false, lowerBoundCloseTimeOffset,
                 upperBoundCloseTimeOffset);
     return trimmed;
 }
