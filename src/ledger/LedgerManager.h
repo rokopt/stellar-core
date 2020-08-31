@@ -6,6 +6,7 @@
 
 #include "catchup/CatchupManager.h"
 #include "history/HistoryManager.h"
+#include "ledger/LedgerTxn.h"
 #include <memory>
 
 namespace stellar
@@ -150,6 +151,12 @@ class LedgerManager
     // `valueExternalized()`; this method is present in the public interface to
     // permit testing.
     virtual void closeLedger(LedgerCloseData const& ledgerData) = 0;
+
+    // Forcibly close the ledger, as in closeLedger(), using the caller-provided
+    // transaction and metadata stream.
+    virtual void
+    closeLedger(LedgerCloseData const& ledgerData, AbstractLedgerTxn& ltx,
+                std::unique_ptr<LedgerCloseMeta> const& ledgerCloseMeta) = 0;
 
     // deletes old entries stored in the database
     virtual void deleteOldEntries(Database& db, uint32_t ledgerSeq,

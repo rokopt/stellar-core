@@ -39,6 +39,7 @@
 #include "medida/meter.h"
 #include "medida/metrics_registry.h"
 #include "medida/timer.h"
+#include "util/XDRStream.h"
 #include "xdrpp/printer.h"
 #include "xdrpp/types.h"
 #include <Tracy.hpp>
@@ -530,20 +531,91 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
                                      std::chrono::milliseconds::max()};
 
     LedgerTxn ltx(mApp.getLedgerTxnRoot());
-    auto header = ltx.loadHeader();
-    ++header.current().ledgerSeq;
-    header.current().previousLedgerHash = mLastClosedLedger.hash;
-    CLOG(DEBUG, "Ledger") << "starting closeLedger() on ledgerSeq="
-                          << header.current().ledgerSeq;
+    auto const newLedgerSeq = ltx.loadHeader().current().ledgerSeq + 1;
 
-    ZoneValue(static_cast<int64_t>(header.current().ledgerSeq));
+    CLOG(DEBUG, "Ledger") << "starting closeLedger() on ledgerSeq="
+                          << newLedgerSeq;
+
+    ZoneValue(static_cast<int64_t>(newLedgerSeq));
 
     auto now = mApp.getClock().now();
     mLedgerAgeClosed.Update(now - mLastClose);
     mLastClose = now;
     mLedgerAge.set_count(0);
 
-    std::shared_ptr<AbstractTxSetFrameForApply> txSet = ledgerData.getTxSet();
+    std::unique_ptr<LedgerCloseMeta> ledgerCloseMeta;
+    if (mMetaStream)
+    {
+        ledgerCloseMeta = std::make_unique<LedgerCloseMeta>();
+    }
+
+    closeLedger(ledgerData, ltx, ledgerCloseMeta);
+
+    if (mMetaStream)
+    {
+        mMetaStream->writeOne(*ledgerCloseMeta);
+        mMetaStream->flush();
+    }
+
+    // The next 4 steps happen in a relatively non-obvious, subtle order.
+    // This is unfortunate and it would be nice if we could make it not
+    // be so subtle, but for the time being this is where we are.
+    //
+    // 1. Queue any history-checkpoint to the database, _within_ the current
+    //    transaction. This way if there's a crash after commit and before
+    //    we've published successfully, we'll re-publish on restart.
+    //
+    // 2. Commit the current transaction.
+    //
+    // 3. Start any queued checkpoint publishing, _after_ the commit so that
+    //    it takes its snapshot of history-rows from the committed state, but
+    //    _before_ we GC any buckets (because this is the step where the
+    //    bucket refcounts are incremented for the duration of the publish).
+    //
+    // 4. GC unreferenced buckets. Only do this once publishes are in progress.
+
+    // step 1
+    auto& hm = mApp.getHistoryManager();
+    hm.maybeQueueHistoryCheckpoint();
+
+    // step 2
+    ltx.commit();
+
+    // step 3
+    hm.publishQueuedHistory();
+    hm.logAndUpdatePublishStatus();
+
+    // step 4
+    mApp.getBucketManager().forgetUnreferencedBuckets();
+
+    // Maybe sleep for parameterized amount of time in simulation mode
+    auto sleepFor = std::chrono::microseconds{
+        mApp.getConfig().OP_APPLY_SLEEP_TIME_FOR_TESTING *
+        ledgerData.getTxSet()->sizeOp()};
+    std::chrono::microseconds applicationTime =
+        closeLedgerTime.checkElapsedTime();
+    if (applicationTime < sleepFor)
+    {
+        sleepFor -= applicationTime;
+        CLOG(DEBUG, "Perf") << "Simulate application: sleep for "
+                            << sleepFor.count() << " microseconds";
+        std::this_thread::sleep_for(sleepFor);
+    }
+
+    std::chrono::duration<double> ledgerTimeSeconds = ledgerTime.Stop();
+    CLOG(DEBUG, "Perf") << "Applied ledger in " << ledgerTimeSeconds.count()
+                        << " seconds";
+}
+
+void
+LedgerManagerImpl::closeLedger(
+    LedgerCloseData const& ledgerData, AbstractLedgerTxn& ltx,
+    std::unique_ptr<LedgerCloseMeta> const& ledgerCloseMeta)
+{
+    auto header = ltx.loadHeader();
+
+    ++header.current().ledgerSeq;
+    header.current().previousLedgerHash = mLastClosedLedger.hash;
 
     // If we do not support ledger version, we can't apply that ledger, fail!
     if (header.current().ledgerVersion >
@@ -556,6 +628,8 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
             fmt::format("cannot apply ledger with not supported version: {}",
                         header.current().ledgerVersion));
     }
+
+    std::shared_ptr<AbstractTxSetFrameForApply> txSet = ledgerData.getTxSet();
 
     if (txSet->previousLedgerHash() != getLastClosedLedgerHeader().hash)
     {
@@ -590,10 +664,8 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
     // LedgerHeader, we optionally collect an even-more-fine-grained record of
     // the ledger entries modified by each tx during tx processing in a
     // LedgerCloseMeta, for streaming to attached clients (typically: horizon).
-    std::unique_ptr<LedgerCloseMeta> ledgerCloseMeta;
-    if (mMetaStream)
+    if (ledgerCloseMeta)
     {
-        ledgerCloseMeta = std::make_unique<LedgerCloseMeta>();
         ledgerCloseMeta->v0().txProcessing.reserve(txSet->sizeTx());
         txSet->toXDR(ledgerCloseMeta->v0().txSet);
     }
@@ -674,61 +746,11 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
 
     ledgerClosed(ltx);
 
-    if (mMetaStream)
+    if (ledgerCloseMeta)
     {
         releaseAssert(ledgerCloseMeta);
         ledgerCloseMeta->v0().ledgerHeader = mLastClosedLedger;
-        mMetaStream->writeOne(*ledgerCloseMeta);
-        mMetaStream->flush();
     }
-
-    // The next 4 steps happen in a relatively non-obvious, subtle order.
-    // This is unfortunate and it would be nice if we could make it not
-    // be so subtle, but for the time being this is where we are.
-    //
-    // 1. Queue any history-checkpoint to the database, _within_ the current
-    //    transaction. This way if there's a crash after commit and before
-    //    we've published successfully, we'll re-publish on restart.
-    //
-    // 2. Commit the current transaction.
-    //
-    // 3. Start any queued checkpoint publishing, _after_ the commit so that
-    //    it takes its snapshot of history-rows from the committed state, but
-    //    _before_ we GC any buckets (because this is the step where the
-    //    bucket refcounts are incremented for the duration of the publish).
-    //
-    // 4. GC unreferenced buckets. Only do this once publishes are in progress.
-
-    // step 1
-    auto& hm = mApp.getHistoryManager();
-    hm.maybeQueueHistoryCheckpoint();
-
-    // step 2
-    ltx.commit();
-
-    // step 3
-    hm.publishQueuedHistory();
-    hm.logAndUpdatePublishStatus();
-
-    // step 4
-    mApp.getBucketManager().forgetUnreferencedBuckets();
-
-    // Maybe sleep for parameterized amount of time in simulation mode
-    auto sleepFor = std::chrono::microseconds{
-        mApp.getConfig().OP_APPLY_SLEEP_TIME_FOR_TESTING * txSet->sizeOp()};
-    std::chrono::microseconds applicationTime =
-        closeLedgerTime.checkElapsedTime();
-    if (applicationTime < sleepFor)
-    {
-        sleepFor -= applicationTime;
-        CLOG(DEBUG, "Perf") << "Simulate application: sleep for "
-                            << sleepFor.count() << " microseconds";
-        std::this_thread::sleep_for(sleepFor);
-    }
-
-    std::chrono::duration<double> ledgerTimeSeconds = ledgerTime.Stop();
-    CLOG(DEBUG, "Perf") << "Applied ledger in " << ledgerTimeSeconds.count()
-                        << " seconds";
 }
 
 void
