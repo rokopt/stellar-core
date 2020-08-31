@@ -122,6 +122,7 @@ Config::Config() : NODE_SEED(SecretKey::random())
     USE_CONFIG_FOR_GENESIS = false;
     FAILURE_SAFETY = -1;
     UNSAFE_QUORUM = false;
+    TRANSACTION_EVALUATOR_COMMANDS_ENABLED = false;
     DISABLE_BUCKET_GC = false;
     DISABLE_XDR_FSYNC = false;
     MAX_SLOTS_TO_REMEMBER = 12;

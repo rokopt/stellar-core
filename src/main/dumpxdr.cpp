@@ -10,6 +10,7 @@
 #include "util/XDROperators.h"
 #include "util/XDRStream.h"
 #include "util/types.h"
+#include "xdr/Stellar-transaction-evaluator.h"
 #include <cereal/archives/json.hpp>
 #include <cereal/cereal.hpp>
 #include <fmt/format.h>
@@ -249,6 +250,12 @@ printXdr(std::string const& filename, std::string const& filetype, bool base64)
             {"meta", PRINTONEXDR(TransactionMeta)},
             {"result", PRINTONEXDR(TransactionResult)},
             {"resultpair", PRINTONEXDR(TransactionResultPair)},
+            {"transaction-evaluator-ledger-state",
+             PRINTONEXDR(TransactionEvaluatorSignedLedgerState)},
+            {"transaction-evaluator-request",
+             PRINTONEXDR(TransactionEvaluatorRequest)},
+            {"transaction-evaluator-response",
+             PRINTONEXDR(TransactionEvaluatorResponse)},
             {"tx", PRINTONEXDR(TransactionEnvelope)},
             {"txfee", PRINTONEXDR(LedgerEntryChanges)}};
 #undef PRINTONEXDR

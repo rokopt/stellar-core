@@ -235,6 +235,10 @@ class Config : public std::enable_shared_from_this<Config>
     //  aren't concerned with byzantine failures.
     bool UNSAFE_QUORUM;
 
+    // If set to true, stellar-core will allow TransactionEvaluator
+    // commands to be submitted to its HTTP port.
+    bool TRANSACTION_EVALUATOR_COMMANDS_ENABLED;
+
     // If set to true, bucket GC will not be performed. It can lead to massive
     // disk usage, but it is useful for recovering of nodes.
     bool DISABLE_BUCKET_GC;

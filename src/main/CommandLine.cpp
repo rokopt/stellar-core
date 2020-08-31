@@ -16,6 +16,7 @@
 #include "main/dumpxdr.h"
 #include "overlay/OverlayManager.h"
 #include "scp/QuorumSetUtils.h"
+#include "transactions/TransactionEvaluator.h"
 #include "util/Logging.h"
 #include "util/optional.h"
 #include "util/types.h"
@@ -203,6 +204,15 @@ clara::Opt
 base64Parser(bool& base64)
 {
     return clara::Opt{base64}["--base64"]("use base64");
+}
+
+clara::Opt
+enableTransactionEvaluatorCommandsParser(
+    bool& enableTransactionEvaluatorCommands)
+{
+    return clara::Opt{enableTransactionEvaluatorCommands}
+        ["--enable-transaction-evaluator-commands"](
+            "respond to transaction-evaluator commands sent over HTTP port");
 }
 
 clara::Opt
@@ -907,6 +917,34 @@ runOfflineInfo(CommandLineArgs const& args)
 }
 
 int
+runTransactionEvaluatorPipeCommand(CommandLineArgs const& args)
+{
+    bool json = false;
+    auto jsonOption =
+        clara::Opt{json}["--json"]("input and output json (default is XDR)");
+    return runWithHelp(args, {jsonOption}, [&] {
+        TransactionEvaluator().pipeCommand(json);
+        return 0;
+    });
+}
+
+int
+runTransactionEvaluatorFileCommand(CommandLineArgs const& args)
+{
+    bool json = false;
+    auto jsonOption =
+        clara::Opt{json}["--json"]("input and output json (default is XDR)");
+    std::string inputFile, outputFile;
+    return runWithHelp(
+        args,
+        {jsonOption, fileNameParser(inputFile), fileNameParser(outputFile)},
+        [&] {
+            TransactionEvaluator().fileCommand(inputFile, outputFile, json);
+            return 0;
+        });
+}
+
+int
 runPrintXdr(CommandLineArgs const& args)
 {
     std::string xdr;
@@ -914,7 +952,9 @@ runPrintXdr(CommandLineArgs const& args)
     auto base64 = false;
 
     auto fileTypeOpt = clara::Opt(fileType, "FILE-TYPE")["--filetype"](
-        "[auto|ledgerheader|meta|result|resultpair|tx|txfee]");
+        "[auto|ledgerheader|meta|result|resultpair|"
+        "transaction-evaluator-ledger-state-spec|transaction-evaluator-request|"
+        "transaction-evaluator-response|tx|txfee]");
 
     return runWithHelp(
         args, {fileNameParser(xdr), fileTypeOpt, base64Parser(base64)}, [&] {
@@ -941,6 +981,7 @@ int
 run(CommandLineArgs const& args)
 {
     CommandLine::ConfigOption configOption;
+    auto transactionEvaluatorCommandsEnabled = false;
     auto disableBucketGC = false;
     uint32_t simulateSleepPerOp = 0;
     std::string stream;
@@ -955,6 +996,8 @@ run(CommandLineArgs const& args)
     return runWithHelp(
         args,
         {configurationParser(configOption),
+         enableTransactionEvaluatorCommandsParser(
+             transactionEvaluatorCommandsEnabled),
          disableBucketGCParser(disableBucketGC),
          simulateParser(simulateSleepPerOp), metadataOutputStreamParser(stream),
          waitForConsensusParser(waitForConsensus)},
@@ -977,6 +1020,9 @@ run(CommandLineArgs const& args)
                 maybeSetMetadataOutputStream(cfg, stream);
                 cfg.FORCE_SCP =
                     cfg.NODE_IS_VALIDATOR ? !waitForConsensus : false;
+                cfg.TRANSACTION_EVALUATOR_COMMANDS_ENABLED =
+                    cfg.NODE_IS_VALIDATOR ? false
+                                          : transactionEvaluatorCommandsEnabled;
             }
             catch (std::exception& e)
             {
@@ -1393,6 +1439,13 @@ handleCommandLine(int argc, char* const* argv)
          {"sign-transaction",
           "add signature to transaction envelope, then quit",
           runSignTransaction},
+         {"transaction-evaluator-file",
+          "run one transaction-evaluator command, then quit",
+          runTransactionEvaluatorFileCommand},
+         {"transaction-evaluator-pipe",
+          "run one transaction-evaluator command (using stdin and stdout), "
+          "then quit",
+          runTransactionEvaluatorPipeCommand},
          {"upgrade-db", "upgrade database schema to current version",
           runUpgradeDB},
 #ifdef BUILD_TESTS

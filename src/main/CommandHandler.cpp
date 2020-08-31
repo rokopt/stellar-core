@@ -18,6 +18,7 @@
 #include "overlay/OverlayManager.h"
 #include "overlay/SurveyManager.h"
 #include "transactions/TransactionBridge.h"
+#include "transactions/TransactionEvaluator.h"
 #include "transactions/TransactionUtils.h"
 #include "util/Logging.h"
 #include "util/StatusManager.h"
@@ -103,6 +104,8 @@ CommandHandler::CommandHandler(Application& app) : mApp(app)
     addRoute("logrotate", &CommandHandler::logRotate);
     addRoute("manualclose", &CommandHandler::manualClose);
     addRoute("metrics", &CommandHandler::metrics);
+    addRoute("transaction-evaluator-command",
+             &CommandHandler::transactionEvaluatorHttpCommand);
     addRoute("tx", &CommandHandler::tx);
     addRoute("upgrades", &CommandHandler::upgrades);
 
@@ -268,6 +271,75 @@ CommandHandler::peers(std::string const& params, std::string& retStr)
         "inbound", mApp.getOverlayManager().getInboundAuthenticatedPeers());
 
     retStr = root.toStyledString();
+}
+
+void
+CommandHandler::transactionEvaluatorHttpCommand(std::string const& params,
+                                                std::string& retStr)
+{
+    ZoneScoped;
+    std::map<std::string, std::string> retMap;
+    http::server::server::parseParams(params, retMap);
+
+    auto setErrorReturn = [&retStr](
+                              TransactionEvaluatorCommandResultCode resultCode,
+                              auto formatStr, auto... args) {
+        TransactionEvaluatorResponse response;
+        TransactionEvaluator::setResult(response, resultCode, formatStr,
+                                        std::forward<decltype(args)>(args)...);
+        retStr = decoder::encode_b64(xdr::xdr_to_opaque(response));
+    };
+
+    if (!mApp.getConfig().TRANSACTION_EVALUATOR_COMMANDS_ENABLED)
+    {
+        setErrorReturn(
+            TRANSACTION_EVALUATOR_COMMAND_TRANSACTION_EVALUATOR_NOT_ENABLED,
+            FMT_STRING("TransactionEvaluator commands not enabled in running "
+                       "stellar-core"));
+        return;
+    }
+
+    auto commandParam = retMap.find("command");
+    if (commandParam == retMap.end())
+    {
+        setErrorReturn(
+            TRANSACTION_EVALUATOR_COMMAND_MISSING_COMMAND_ARGUMENT,
+            FMT_STRING(
+                "--transaction-evaluator-command requires 'command' argument"));
+        return;
+    }
+    auto command = commandParam->second;
+
+    if (command == "submit-request")
+    {
+        auto xdr = retMap.find("xdr");
+        auto json = retMap.find("json");
+        auto xdrPresent = xdr != retMap.end();
+        auto jsonPresent = json != retMap.end();
+        if (xdrPresent && jsonPresent)
+        {
+            setErrorReturn(
+                TRANSACTION_EVALUATOR_COMMAND_BOTH_XDR_AND_JSON_ARGUMENTS,
+                FMT_STRING("submit-request transaction-evaluator command "
+                           "must use only one of 'xdr' and 'json'"));
+            return;
+        }
+        if (!xdrPresent && !jsonPresent)
+        {
+            setErrorReturn(
+                TRANSACTION_EVALUATOR_COMMAND_MISSING_ARGUMENT,
+                FMT_STRING("submit-request transaction-evaluator command "
+                           "requires 'xdr' or 'json' argument"));
+            return;
+        }
+        retStr =
+            TransactionEvaluator(mApp).stringCommand(xdr->second, jsonPresent);
+        return;
+    }
+
+    setErrorReturn(
+        TRANSACTION_EVALUATOR_COMMAND_INVALID_COMMAND_NAME,
+        FMT_STRING("Invalid transaction-evaluator command name '{}'"), command);
 }
 
 void
