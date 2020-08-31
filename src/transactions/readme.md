@@ -79,6 +79,11 @@ the result set to "Failed".
 When transactions are applied (success or not), the result is saved in the 
 "txhistory" and "txfeehistory" tables in the database.
 
+## Transaction Evaluator API
+
+Transaction Evaluator API requests and responses are specified in
+[`src/xdr/Stellar-transaction-evaluator.x`](../xdr/Stellar-transaction-evaluator.x)
+
 # Operations
 
 Operations are individual commands that mutate the ledger.
