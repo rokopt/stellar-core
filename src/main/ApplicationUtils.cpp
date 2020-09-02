@@ -17,6 +17,7 @@
 #include "main/Maintainer.h"
 #include "main/PersistentState.h"
 #include "main/StellarCoreVersion.h"
+#include "transactions/TransactionEvaluator.h"
 #include "util/Logging.h"
 #include "work/WorkScheduler.h"
 
@@ -29,6 +30,9 @@ namespace stellar
 int
 runWithConfig(Config cfg)
 {
+    auto const transactionEvaluatorMode =
+        cfg.TRANSACTION_EVALUATOR_COMMANDS_ENABLED;
+
     if (cfg.MANUAL_CLOSE)
     {
         if (!cfg.NODE_IS_VALIDATOR)
@@ -40,11 +44,19 @@ runWithConfig(Config cfg)
     }
 
     LOG(INFO) << "Starting stellar-core " << STELLAR_CORE_VERSION;
-    VirtualClock clock(VirtualClock::REAL_TIME);
+    VirtualClock clock(!transactionEvaluatorMode ? VirtualClock::REAL_TIME
+                                                 : VirtualClock::VIRTUAL_TIME);
     Application::pointer app;
     try
     {
-        app = Application::create(clock, cfg, false);
+        if (!cfg.TRANSACTION_EVALUATOR_COMMANDS_ENABLED)
+        {
+            app = Application::create(clock, cfg, false);
+        }
+        else
+        {
+            app = TransactionEvaluatorApplication::create(clock, cfg, false);
+        }
 
         if (!app->getHistoryArchiveManager().checkSensibleConfig())
         {

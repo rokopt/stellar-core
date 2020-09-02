@@ -23,11 +23,18 @@
 namespace stellar
 {
 
-std::shared_ptr<Application>
+TransactionEvaluatorApplication::TransactionEvaluatorApplication(
+    VirtualClock& clock, Config const& cfg)
+    : ApplicationImpl(clock, cfg)
+{
+}
+
+std::shared_ptr<TransactionEvaluatorApplication>
 TransactionEvaluator::makePrivateApplication(
     std::string const& networkPassphrase)
 {
     Config cfg;
+    cfg.TRANSACTION_EVALUATOR_COMMANDS_ENABLED = true;
     cfg.MODE_ENABLES_BUCKETLIST = false;
     cfg.DISABLE_BUCKET_GC = true;
     cfg.MODE_STORES_HISTORY = false;
@@ -43,7 +50,8 @@ TransactionEvaluator::makePrivateApplication(
     cfg.NETWORK_PASSPHRASE = networkPassphrase;
     cfg.LEDGER_PROTOCOL_VERSION = Config::CURRENT_LEDGER_PROTOCOL_VERSION;
     cfg.USE_CONFIG_FOR_GENESIS = true;
-    auto app = Application::create(*mPrivateClock, cfg);
+    auto app = Application::create<TransactionEvaluatorApplication>(
+        *mPrivateClock, cfg);
     app->start();
     return app;
 }

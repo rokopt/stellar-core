@@ -6,6 +6,7 @@
 
 #include "ledger/LedgerTxn.h"
 #include "main/Application.h"
+#include "main/ApplicationImpl.h"
 #include "util/Timer.h"
 #include "xdr/Stellar-transaction-evaluator.h"
 
@@ -18,14 +19,20 @@
 namespace stellar
 {
 
+class TransactionEvaluatorApplication : public ApplicationImpl
+{
+  public:
+    TransactionEvaluatorApplication(VirtualClock& clock, Config const& cfg);
+};
+
 class TransactionEvaluator
 {
   private:
     std::shared_ptr<VirtualClock> mPrivateClock;
-    std::shared_ptr<Application> mPrivateApp;
+    std::shared_ptr<TransactionEvaluatorApplication> mPrivateApp;
     Application& mApp;
 
-    std::shared_ptr<Application>
+    std::shared_ptr<TransactionEvaluatorApplication>
     makePrivateApplication(std::string const& networkPassphrase);
 
     static std::string
