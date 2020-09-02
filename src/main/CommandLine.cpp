@@ -1021,8 +1021,9 @@ run(CommandLineArgs const& args)
                 cfg.FORCE_SCP =
                     cfg.NODE_IS_VALIDATOR ? !waitForConsensus : false;
                 cfg.TRANSACTION_EVALUATOR_COMMANDS_ENABLED =
-                    cfg.NODE_IS_VALIDATOR ? false
-                                          : transactionEvaluatorCommandsEnabled;
+                    cfg.isNetworkedValidator()
+                        ? false
+                        : transactionEvaluatorCommandsEnabled;
             }
             catch (std::exception& e)
             {

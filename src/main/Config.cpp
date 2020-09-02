@@ -1559,6 +1559,18 @@ Config::generateQuorumSet(std::vector<ValidatorEntry> const& validators)
     return res;
 }
 
+bool
+Config::isNetworkedValidator() const
+{
+    return NODE_IS_VALIDATOR && !RUN_STANDALONE;
+}
+
+bool
+Config::isStandaloneValidator() const
+{
+    return NODE_IS_VALIDATOR && RUN_STANDALONE;
+}
+
 std::string
 Config::toString(SCPQuorumSet const& qset)
 {

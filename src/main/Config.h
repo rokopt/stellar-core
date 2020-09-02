@@ -412,6 +412,9 @@ class Config : public std::enable_shared_from_this<Config>
     void setNoListen();
     void setNoPublish();
 
+    bool isNetworkedValidator() const;
+    bool isStandaloneValidator() const;
+
     // function to stringify a quorum set
     std::string toString(SCPQuorumSet const& qset);
 };

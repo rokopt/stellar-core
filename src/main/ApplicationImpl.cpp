@@ -399,20 +399,26 @@ ApplicationImpl::start()
         throw std::invalid_argument("NODE_IS_VALIDATOR not set");
     }
 
-    if (mConfig.METADATA_OUTPUT_STREAM != "" && mConfig.NODE_IS_VALIDATOR)
+    if (mConfig.METADATA_OUTPUT_STREAM != "" && mConfig.isNetworkedValidator())
     {
         LOG(ERROR) << "Starting stellar-core with METADATA_OUTPUT_STREAM "
-                      "requires NODE_IS_VALIDATOR to be unset";
-        throw std::invalid_argument("NODE_IS_VALIDATOR is set");
+                      "requires NODE_IS_VALIDATOR to be unset or "
+                      "RUN_STANDALONE to be set";
+        throw std::invalid_argument(
+            "METADATA_OUTPUT_STREAM is set, NODE_IS_VALIDATOR is set, and "
+            "RUN_STANDALONE is not set");
     }
 
-    if (mConfig.NODE_IS_VALIDATOR)
+    if (mConfig.isNetworkedValidator())
     {
         if (mConfig.MODE_USES_IN_MEMORY_LEDGER)
         {
             LOG(ERROR) << "Starting stellar-core with in-memory ledger mode "
-                          "requires NODE_IS_VALIDATOR to be unset";
-            throw std::invalid_argument("NODE_IS_VALIDATOR is set");
+                          "requires NODE_IS_VALIDATOR to be unset or "
+                          "RUN_STANDALONE to be set";
+            throw std::invalid_argument(
+                "MODE_USES_IN_MEMORY_LEDGER is set, NODE_IS_VALIDATOR is set, "
+                "and RUN_STANDALONE is not set");
         }
     }
 
