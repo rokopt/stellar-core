@@ -88,6 +88,10 @@ class HerderImpl : public Herder
 
     void setInSyncAndTriggerNextLedger() override;
 
+    void triggerEnhancedManualCloseLedger(
+        std::map<std::string, std::string> const& retMap,
+        std::string& retStr) override;
+
     void setUpgrades(Upgrades::UpgradeParameters const& upgrades) override;
     std::string getUpgradesJson() override;
 

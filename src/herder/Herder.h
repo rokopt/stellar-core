@@ -127,6 +127,9 @@ class Herder
     virtual void triggerNextLedger(uint32_t ledgerSeqToTrigger,
                                    bool forceTrackingSCP) = 0;
     virtual void setInSyncAndTriggerNextLedger() = 0;
+    virtual void triggerEnhancedManualCloseLedger(
+        std::map<std::string, std::string> const& retMap,
+        std::string& retStr) = 0;
 
     // lookup a nodeID in config and in SCP messages
     virtual bool resolveNodeID(std::string const& s, PublicKey& retKey) = 0;

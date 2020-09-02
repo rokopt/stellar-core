@@ -917,6 +917,14 @@ HerderImpl::setInSyncAndTriggerNextLedger()
     triggerNextLedger(lcl + 1, false);
 }
 
+void
+HerderImpl::triggerEnhancedManualCloseLedger(
+    std::map<std::string, std::string> const& retMap, std::string& retStr)
+{
+    throw std::runtime_error(
+        "Herder does not yet implement enhanced manual close");
+}
+
 // called to take a position during the next round
 // uses the state in LedgerManager to derive a starting position
 void

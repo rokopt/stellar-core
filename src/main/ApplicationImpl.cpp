@@ -587,7 +587,7 @@ ApplicationImpl::manualClose(std::map<std::string, std::string> const& retMap,
         retStr = "ENHANCED_MANUAL_CLOSE not enabled";
         return;
     }
-    throw std::runtime_error("Enhanced manual close not implemented yet");
+    mHerder->triggerEnhancedManualCloseLedger(retMap, retStr);
 }
 
 #ifdef BUILD_TESTS
