@@ -247,7 +247,7 @@ class Application
     // If config.ENHANCED_MANUAL_CLOSE=true, force the current
     // ledger to close and return true. Otherwise return false. This method
     // exists only for testing.
-    virtual bool manualClose(std::string const& params,
+    virtual void manualClose(std::map<std::string, std::string> const& retMap,
                              std::string& retStr) = 0;
 
 #ifdef BUILD_TESTS

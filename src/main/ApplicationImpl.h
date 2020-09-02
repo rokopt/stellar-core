@@ -93,7 +93,7 @@ class ApplicationImpl : public Application
     virtual void joinAllThreads() override;
 
     virtual bool manualClose() override;
-    virtual bool manualClose(std::string const& params,
+    virtual void manualClose(std::map<std::string, std::string> const& retMap,
                              std::string& retStr) override;
 
 #ifdef BUILD_TESTS

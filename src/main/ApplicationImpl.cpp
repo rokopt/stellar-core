@@ -578,12 +578,14 @@ ApplicationImpl::manualClose()
     return false;
 }
 
-bool
-ApplicationImpl::manualClose(std::string const& params, std::string& retStr)
+void
+ApplicationImpl::manualClose(std::map<std::string, std::string> const& retMap,
+                             std::string& retStr)
 {
     if (!mConfig.ENHANCED_MANUAL_CLOSE)
     {
-        return false;
+        retStr = "ENHANCED_MANUAL_CLOSE not enabled";
+        return;
     }
     throw std::runtime_error("Enhanced manual close not implemented yet");
 }

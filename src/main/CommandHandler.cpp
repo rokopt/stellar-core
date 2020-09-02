@@ -170,6 +170,15 @@ CommandHandler::fileNotFound(std::string const& params, std::string& retStr)
 void
 CommandHandler::manualClose(std::string const& params, std::string& retStr)
 {
+    ZoneScoped;
+    std::map<std::string, std::string> retMap;
+    http::server::server::parseParams(params, retMap);
+
+    if (!retMap.empty())
+    {
+        mApp.manualClose(retMap, retStr);
+        return;
+    }
     if (mApp.manualClose())
     {
         retStr = "Triggering a new consensus round";

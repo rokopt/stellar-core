@@ -29,15 +29,15 @@ TransactionEvaluatorApplication::TransactionEvaluatorApplication(
 {
 }
 
-bool
-TransactionEvaluatorApplication::manualClose(std::string const& params,
-                                             std::string& retStr)
+void
+TransactionEvaluatorApplication::manualClose(
+    std::map<std::string, std::string> const& retMap, std::string& retStr)
 {
     if (!getConfig().isStandaloneValidator())
     {
         retStr = "Manually closing ledger with parameters requires "
                  "NODE_IS_VALIDATOR and RUN_STANDALONE";
-        return false;
+        return;
     }
     throw std::runtime_error(
         "TransactionEvaluatorApplication not implemented yet");
