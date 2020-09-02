@@ -32,6 +32,7 @@ const uint32 Config::MAXIMUM_QUORUM_NESTING_LEVEL = 4;
 static const std::unordered_set<std::string> TESTING_ONLY_OPTIONS = {
     "RUN_STANDALONE",
     "MANUAL_CLOSE",
+    "ENHANCED_MANUAL_CLOSE",
     "ARTIFICIALLY_GENERATE_LOAD_FOR_TESTING",
     "ARTIFICIALLY_ACCELERATE_TIME_FOR_TESTING",
     "ARTIFICIALLY_SET_CLOSE_TIME_FOR_TESTING",
@@ -775,6 +776,10 @@ Config::processConfig(std::shared_ptr<cpptoml::table> t)
             else if (item.first == "MANUAL_CLOSE")
             {
                 MANUAL_CLOSE = readBool(item);
+            }
+            else if (item.first == "ENHANCED_MANUAL_CLOSE")
+            {
+                ENHANCED_MANUAL_CLOSE = readBool(item);
             }
             else if (item.first == "LOG_FILE_PATH")
             {
