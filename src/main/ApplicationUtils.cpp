@@ -43,6 +43,15 @@ runWithConfig(Config cfg)
         }
     }
 
+    if (cfg.ENHANCED_MANUAL_CLOSE &&
+        (!cfg.MANUAL_CLOSE || !cfg.isStandaloneValidator()))
+    {
+        LOG(ERROR)
+            << "Starting stellar-core in ENHANCED_MANUAL_CLOSE mode requires "
+               "MANUAL_CLOSE to be set, NODE_IS_VALIDATOR to be set, and "
+               "RUN_STANDALONE to be unset";
+    }
+
     LOG(INFO) << "Starting stellar-core " << STELLAR_CORE_VERSION;
     VirtualClock clock(!transactionEvaluatorMode ? VirtualClock::REAL_TIME
                                                  : VirtualClock::VIRTUAL_TIME);

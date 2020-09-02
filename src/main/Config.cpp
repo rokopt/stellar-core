@@ -108,6 +108,7 @@ Config::Config() : NODE_SEED(SecretKey::random())
     // configurable
     RUN_STANDALONE = false;
     MANUAL_CLOSE = false;
+    ENHANCED_MANUAL_CLOSE = false;
     CATCHUP_COMPLETE = false;
     CATCHUP_RECENT = 0;
     AUTOMATIC_MAINTENANCE_PERIOD = std::chrono::seconds{14400};

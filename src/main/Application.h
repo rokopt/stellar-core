@@ -244,7 +244,7 @@ class Application
     // true. Otherwise return false. This method exists only for testing.
     virtual bool manualClose() = 0;
 
-    // If config.TRANSACTION_EVALUATOR_COMMANDS_ENABLED=true, force the current
+    // If config.ENHANCED_MANUAL_CLOSE=true, force the current
     // ledger to close and return true. Otherwise return false. This method
     // exists only for testing.
     virtual bool manualClose(std::string const& params,

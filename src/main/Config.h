@@ -136,6 +136,11 @@ class Config : public std::enable_shared_from_this<Config>
     // Mode for testing. Ledger will only close when told to over http
     bool MANUAL_CLOSE;
 
+    // Allow some parameters of ledger close to be specified while triggering a
+    // manual close.  May be set only if MANUAL_CLOSE and RUN_STANDALONE are
+    // set.
+    bool ENHANCED_MANUAL_CLOSE;
+
     // Whether to catchup "completely" (replaying all history); default is
     // false,
     // meaning catchup "minimally", using deltas to the most recent snapshot.

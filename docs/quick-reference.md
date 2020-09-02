@@ -78,6 +78,11 @@ The `manualclose` command allows to close a ledger, this is used when the instan
 configured with `MANUAL_CLOSE=true`.
 With this you can test various scenario where ledger boundaries could be important.
 
+Setting `ENHANCED_MANUAL_CLOSE=true` (along with `MANUAL_CLOSE=true`) further
+allows the `manualclose` command to control some of the parameters of the
+ledger that it causes to close.  It may be set only if `RUN_STANDALONE=true` is
+set.
+
 On private networks, you can use the `generateload` command to create accounts and generate
 synthetic traffic.
 
