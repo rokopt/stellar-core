@@ -93,6 +93,8 @@ class ApplicationImpl : public Application
     virtual void joinAllThreads() override;
 
     virtual bool manualClose() override;
+    virtual bool manualClose(std::string const& params,
+                             std::string& retStr) override;
 
 #ifdef BUILD_TESTS
     virtual void generateLoad(bool isCreate, uint32_t nAccounts,

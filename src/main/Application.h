@@ -240,9 +240,15 @@ class Application
     // returns.
     virtual void joinAllThreads() = 0;
 
-    // If config.MANUAL_MODE=true, force the current ledger to close and return
+    // If config.MANUAL_CLOSE=true, force the current ledger to close and return
     // true. Otherwise return false. This method exists only for testing.
     virtual bool manualClose() = 0;
+
+    // If config.TRANSACTION_EVALUATOR_COMMANDS_ENABLED=true, force the current
+    // ledger to close and return true. Otherwise return false. This method
+    // exists only for testing.
+    virtual bool manualClose(std::string const& params,
+                             std::string& retStr) = 0;
 
 #ifdef BUILD_TESTS
     // If config.ARTIFICIALLY_GENERATE_LOAD_FOR_TESTING=true, generate some load

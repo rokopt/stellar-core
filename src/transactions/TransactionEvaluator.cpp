@@ -28,6 +28,13 @@ TransactionEvaluatorApplication::TransactionEvaluatorApplication(
     : ApplicationImpl(clock, cfg)
 {
 }
+bool
+TransactionEvaluatorApplication::manualClose(std::string const& params,
+                                             std::string& retStr)
+{
+    throw std::runtime_error(
+        "TransactionEvaluatorApplication not implemented yet");
+}
 
 std::shared_ptr<TransactionEvaluatorApplication>
 TransactionEvaluator::makePrivateApplication(

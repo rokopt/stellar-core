@@ -23,6 +23,8 @@ class TransactionEvaluatorApplication : public ApplicationImpl
 {
   public:
     TransactionEvaluatorApplication(VirtualClock& clock, Config const& cfg);
+    virtual bool manualClose(std::string const& params,
+                             std::string& retStr) override;
 };
 
 class TransactionEvaluator

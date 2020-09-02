@@ -572,6 +572,13 @@ ApplicationImpl::manualClose()
     return false;
 }
 
+bool
+ApplicationImpl::manualClose(std::string const& params, std::string& retStr)
+{
+    // Overridden if enhanced manual close is enabled.
+    return false;
+}
+
 #ifdef BUILD_TESTS
 void
 ApplicationImpl::generateLoad(bool isCreate, uint32_t nAccounts,
