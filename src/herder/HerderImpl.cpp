@@ -782,7 +782,7 @@ HerderImpl::maybeTriggerNextLedger(bool synchronous)
         if (!mApp.getConfig().MANUAL_CLOSE)
             mTriggerTimer.async_wait(
                 std::bind(&HerderImpl::triggerNextLedger, this,
-                          static_cast<uint32_t>(nextIndex), true),
+                          static_cast<uint32_t>(nextIndex), true, 0),
                 &VirtualTimer::onFailureNoop);
     }
     else
@@ -950,7 +950,8 @@ HerderImpl::triggerEnhancedManualCloseLedger(
     auto const minLedgerSeq = mLedgerManager.getLastClosedLedgerNum() + 1;
     auto ledgerSeq = minLedgerSeq;
     auto const minCloseTime =
-        mLedgerManager.getLastClosedLedgerHeader().header.scpValue.closeTime;
+        mLedgerManager.getLastClosedLedgerHeader().header.scpValue.closeTime +
+        1;
     auto closeTime = minCloseTime;
 
     try
@@ -970,15 +971,14 @@ HerderImpl::triggerEnhancedManualCloseLedger(
         return;
     }
 
-    throw std::runtime_error(
-        "Herder does not yet implement enhanced manual close");
+    triggerNextLedger(ledgerSeq, false, closeTime);
 }
 
 // called to take a position during the next round
 // uses the state in LedgerManager to derive a starting position
 void
 HerderImpl::triggerNextLedger(uint32_t ledgerSeqToTrigger,
-                              bool checkTrackingSCP)
+                              bool checkTrackingSCP, TimePoint minCloseTime)
 {
     ZoneScoped;
     ZoneValue(static_cast<int64_t>(ledgerSeqToTrigger));
@@ -1006,17 +1006,25 @@ HerderImpl::triggerNextLedger(uint32_t ledgerSeqToTrigger,
     {
         nextCloseTime = lcl.header.scpValue.closeTime + 1;
     }
-
-    // Ensure we're about to nominate a value with valid close time
-    auto isCtValid =
-        ctValidityOffset(nextCloseTime) == std::chrono::milliseconds::zero();
-
-    if (!isCtValid)
+    if (nextCloseTime < minCloseTime)
     {
-        CLOG(WARNING, "Herder") << fmt::format(
-            "Invalid close time selected ({}), skipping nomination",
-            nextCloseTime);
-        return;
+        nextCloseTime = minCloseTime;
+    }
+
+    auto const enhancedManualClose = mApp.getConfig().ENHANCED_MANUAL_CLOSE;
+    if (!enhancedManualClose)
+    {
+        // Ensure we're about to nominate a value with valid close time
+        auto isCtValid = ctValidityOffset(nextCloseTime) ==
+                         std::chrono::milliseconds::zero();
+
+        if (!isCtValid)
+        {
+            CLOG(WARNING, "Herder") << fmt::format(
+                "Invalid close time selected ({}), skipping nomination",
+                nextCloseTime);
+            return;
+        }
     }
 
     // Protocols including the "closetime change" (CAP-0034) externalize
@@ -1065,7 +1073,7 @@ HerderImpl::triggerNextLedger(uint32_t ledgerSeqToTrigger,
 
     // no point in sending out a prepare:
     // externalize was triggered on a more recent ledger
-    if (ledgerSeqToTrigger != slotIndex)
+    if (!enhancedManualClose && ledgerSeqToTrigger != slotIndex)
     {
         return;
     }

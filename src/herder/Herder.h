@@ -125,7 +125,8 @@ class Herder
     virtual SequenceNumber getMaxSeqInPendingTxs(AccountID const&) = 0;
 
     virtual void triggerNextLedger(uint32_t ledgerSeqToTrigger,
-                                   bool forceTrackingSCP) = 0;
+                                   bool forceTrackingSCP,
+                                   TimePoint minCloseTime = 0) = 0;
     virtual void setInSyncAndTriggerNextLedger() = 0;
     virtual void triggerEnhancedManualCloseLedger(
         std::map<std::string, std::string> const& retMap,
