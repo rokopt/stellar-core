@@ -39,6 +39,7 @@
 
 #include <ctime>
 #include <fmt/format.h>
+#include <stdexcept>
 
 using namespace std;
 
@@ -921,6 +922,42 @@ void
 HerderImpl::triggerEnhancedManualCloseLedger(
     std::map<std::string, std::string> const& retMap, std::string& retStr)
 {
+    auto setNumericParam = [&](auto& numericParam, std::string const& key,
+                               auto convert) {
+        auto entry = retMap.find(key);
+        if (entry != retMap.end())
+        {
+            try
+            {
+                numericParam = convert(entry->second);
+            }
+            catch (std::exception const& e)
+            {
+                throw std::invalid_argument(
+                    fmt::format(FMT_STRING("Invalid '{}' argument '{}': {}"),
+                                key, entry->second, e.what()));
+            }
+        }
+    };
+
+    auto ledgerSeq = mLedgerManager.getLastClosedLedgerNum() + 1;
+    auto closeTime =
+        mLedgerManager.getLastClosedLedgerHeader().header.scpValue.closeTime;
+
+    try
+    {
+        setNumericParam(ledgerSeq, "ledgerSeq",
+                        [](std::string stringVal) { return stoul(stringVal); });
+        setNumericParam(closeTime, "closeTime", [](std::string stringVal) {
+            return stoull(stringVal);
+        });
+    }
+    catch (std::exception const& e)
+    {
+        retStr = e.what();
+        return;
+    }
+
     throw std::runtime_error(
         "Herder does not yet implement enhanced manual close");
 }
