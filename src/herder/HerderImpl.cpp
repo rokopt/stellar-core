@@ -923,7 +923,7 @@ HerderImpl::triggerEnhancedManualCloseLedger(
     std::map<std::string, std::string> const& retMap, std::string& retStr)
 {
     auto setNumericParam = [&](auto& numericParam, std::string const& key,
-                               auto convert) {
+                               auto convert, auto const minVal) {
         auto entry = retMap.find(key);
         if (entry != retMap.end())
         {
@@ -937,20 +937,32 @@ HerderImpl::triggerEnhancedManualCloseLedger(
                     fmt::format(FMT_STRING("Invalid '{}' argument '{}': {}"),
                                 key, entry->second, e.what()));
             }
+
+            if (numericParam < minVal)
+            {
+                throw std::invalid_argument(fmt::format(
+                    FMT_STRING("Invalid '{}' argument '{}': minimum value {}"),
+                    key, entry->second, minVal));
+            }
         }
     };
 
-    auto ledgerSeq = mLedgerManager.getLastClosedLedgerNum() + 1;
-    auto closeTime =
+    auto const minLedgerSeq = mLedgerManager.getLastClosedLedgerNum() + 1;
+    auto ledgerSeq = minLedgerSeq;
+    auto const minCloseTime =
         mLedgerManager.getLastClosedLedgerHeader().header.scpValue.closeTime;
+    auto closeTime = minCloseTime;
 
     try
     {
-        setNumericParam(ledgerSeq, "ledgerSeq",
-                        [](std::string stringVal) { return stoul(stringVal); });
-        setNumericParam(closeTime, "closeTime", [](std::string stringVal) {
-            return stoull(stringVal);
-        });
+        setNumericParam(
+            ledgerSeq, "ledgerSeq",
+            [](std::string stringVal) { return stoul(stringVal); },
+            minLedgerSeq);
+        setNumericParam(
+            closeTime, "closeTime",
+            [](std::string stringVal) { return stoull(stringVal); },
+            minCloseTime);
     }
     catch (std::exception const& e)
     {
