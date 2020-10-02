@@ -24,6 +24,7 @@ ApplyLedgerWork::onRun()
 {
     ZoneScoped;
     mApp.getLedgerManager().closeLedger(mLedgerCloseData);
+    FrameMark;
     return BasicWork::State::WORK_SUCCESS;
 }
 

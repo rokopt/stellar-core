@@ -18,6 +18,7 @@
 #include "transactions/TransactionSQL.h"
 #include "transactions/TransactionUtils.h"
 #include "util/XDRCereal.h"
+#include <Tracy.hpp>
 #include <fmt/format.h>
 
 namespace stellar
@@ -531,6 +532,7 @@ TxSimApplyTransactionsWork::onReset()
 
         LedgerCloseData closeData(header.ledgerSeq + 1, txSet, sv);
         lm.closeLedger(closeData);
+        FrameMark;
     }
 
     // Prepare the HistoryArchiveStream

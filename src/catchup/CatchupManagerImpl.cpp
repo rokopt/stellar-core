@@ -386,6 +386,7 @@ CatchupManagerImpl::tryApplySyncingLedgers()
                   LedgerManager::ledgerAbbrev(ledgerHeader));
 
         ++it;
+        FrameMark;
     }
 
     mSyncingLedgers.erase(mSyncingLedgers.cbegin(), it);
