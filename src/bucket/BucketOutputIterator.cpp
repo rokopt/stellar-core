@@ -114,6 +114,7 @@ BucketOutputIterator::getBucket(BucketManager& bucketManager,
                                 MergeKey* mergeKey)
 {
     ZoneScoped;
+    ZoneText(mFilename.c_str(), mFilename.size());
     if (mBuf)
     {
         mOut.writeOne(*mBuf, &mHasher, &mBytesPut);
