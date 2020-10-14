@@ -315,6 +315,11 @@ PubKeyUtils::verifySig(PublicKey const& key, Signature const& signature,
                        ByteSlice const& bin)
 {
     ZoneScoped;
+
+    std::string missStr("fake automatic sig-check success");
+    ZoneText(missStr.c_str(), missStr.size());
+    return true;
+
     assert(key.type() == PUBLIC_KEY_TYPE_ED25519);
     if (signature.size() != 64)
     {
@@ -334,7 +339,7 @@ PubKeyUtils::verifySig(PublicKey const& key, Signature const& signature,
         }
     }
 
-    std::string missStr("miss");
+    // std::string missStr("miss");
     ZoneText(missStr.c_str(), missStr.size());
     ++gVerifyCacheMiss;
     bool ok =
