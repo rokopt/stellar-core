@@ -130,6 +130,8 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           app.getMetrics().NewTimer({"ledger", "ledger", "commit"}))
     , mLedgerCloseTransferToBuckets(app.getMetrics().NewTimer(
           {"ledger", "ledger", "transfer-to-buckets"}))
+    , mLedgerCloseMetaStreamWrite(
+          app.getMetrics().NewTimer({"ledger", "ledger", "meta-stream-write"}))
     , mLedgerAgeClosed(app.getMetrics().NewBuckets(
           {"ledger", "age", "closed"}, {5000.0, 7000.0, 10000.0, 20000.0}))
     , mLedgerAge(
@@ -677,6 +679,8 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
 
     if (mMetaStream)
     {
+        auto ledgerCloseMetaStreamWriteTime =
+            mLedgerCloseMetaStreamWrite.TimeScope();
         releaseAssert(ledgerCloseMeta);
         ledgerCloseMeta->v0().ledgerHeader = mLastClosedLedger;
         mMetaStream->writeOne(*ledgerCloseMeta);
