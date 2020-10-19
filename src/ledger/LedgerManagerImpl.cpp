@@ -122,6 +122,14 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           app.getMetrics().NewHistogram({"ledger", "prefetch", "hit-rate"},
                                         medida::SamplingInterface::kSliding))
     , mLedgerClose(app.getMetrics().NewTimer({"ledger", "ledger", "close"}))
+    , mLedgerClosePrefetch(
+          app.getMetrics().NewTimer({"ledger", "ledger", "prefetch"}))
+    , mLedgerCloseTxApply(
+          app.getMetrics().NewTimer({"ledger", "ledger", "tx-apply"}))
+    , mLedgerCloseCommit(
+          app.getMetrics().NewTimer({"ledger", "ledger", "commit"}))
+    , mLedgerCloseTransferToBuckets(app.getMetrics().NewTimer(
+          {"ledger", "ledger", "transfer-to-buckets"}))
     , mLedgerAgeClosed(app.getMetrics().NewBuckets(
           {"ledger", "age", "closed"}, {5000.0, 7000.0, 10000.0, 20000.0}))
     , mLedgerAge(
@@ -594,13 +602,17 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
     vector<TransactionFrameBasePtr> txs = ledgerData.getTxSet()->sortForApply();
 
     // first, prefetch source accounts fot txset, then charge fees
+    auto ledgerPrefetchTime = mLedgerClosePrefetch.TimeScope();
     prefetchTxSourceIds(txs);
+    ledgerPrefetchTime.Stop();
     processFeesSeqNums(txs, ltx, txSet->getBaseFee(header.current()),
                        ledgerCloseMeta);
 
     TransactionResultSet txResultSet;
     txResultSet.results.reserve(txs.size());
+    auto ledgerTxApplyTime = mLedgerCloseTxApply.TimeScope();
     applyTransactions(txs, ltx, txResultSet, ledgerCloseMeta);
+    ledgerTxApplyTime.Stop();
 
     ltx.loadHeader().current().txSetResultHash = xdrSha256(txResultSet);
 
@@ -693,7 +705,9 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
     hm.maybeQueueHistoryCheckpoint();
 
     // step 2
+    auto ledgerCloseCommitTime = mLedgerCloseCommit.TimeScope();
     ltx.commit();
+    ledgerCloseCommitTime.Stop();
 
     // step 3
     hm.publishQueuedHistory();
@@ -1039,7 +1053,10 @@ LedgerManagerImpl::ledgerClosed(AbstractLedgerTxn& ltx)
                "sealing ledger {} with version {}, sending to bucket list",
                ledgerSeq, ledgerVers);
 
+    auto ledgerCloseTransferToBucketsTime =
+        mLedgerCloseTransferToBuckets.TimeScope();
     transferLedgerEntriesToBucketList(ltx, ledgerSeq, ledgerVers);
+    ledgerCloseTransferToBucketsTime.Stop();
 
     ltx.unsealHeader([this](LedgerHeader& lh) {
         mApp.getBucketManager().snapshotLedger(lh);

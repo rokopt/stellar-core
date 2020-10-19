@@ -48,6 +48,10 @@ class LedgerManagerImpl : public LedgerManager
     medida::Histogram& mOperationCount;
     medida::Histogram& mPrefetchHitRate;
     medida::Timer& mLedgerClose;
+    medida::Timer& mLedgerClosePrefetch;
+    medida::Timer& mLedgerCloseTxApply;
+    medida::Timer& mLedgerCloseCommit;
+    medida::Timer& mLedgerCloseTransferToBuckets;
     medida::Buckets& mLedgerAgeClosed;
     medida::Counter& mLedgerAge;
     VirtualClock::time_point mLastClose;
