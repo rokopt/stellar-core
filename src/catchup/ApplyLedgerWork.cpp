@@ -23,8 +23,8 @@ BasicWork::State
 ApplyLedgerWork::onRun()
 {
     ZoneScoped;
-    mApp.getLedgerManager().closeLedger(mLedgerCloseData);
     FrameMark;
+    mApp.getLedgerManager().closeLedger(mLedgerCloseData);
     return BasicWork::State::WORK_SUCCESS;
 }
 

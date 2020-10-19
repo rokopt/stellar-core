@@ -287,6 +287,7 @@ ApplyCheckpointWork::onRun()
 
         if (done)
         {
+            FrameMark;
             return State::WORK_SUCCESS;
         }
 

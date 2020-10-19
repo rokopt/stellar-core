@@ -254,6 +254,7 @@ ApplyBucketsWork::advance(std::string const& bucketName,
             Bucket, "Bucket-apply: {} entries in {}/{} in {}/{} files ({}%)",
             mAppliedEntries, formatSize(mAppliedSize), formatSize(mTotalSize),
             mAppliedBuckets, mTotalBuckets, (100 * mAppliedSize / mTotalSize));
+        FrameMark;
     }
 }
 
