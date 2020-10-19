@@ -132,6 +132,8 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           {"ledger", "ledger", "transfer-to-buckets"}))
     , mLedgerCloseMetaStreamWrite(
           app.getMetrics().NewTimer({"ledger", "ledger", "meta-stream-write"}))
+    , mNormalizedLedgerClose(
+          app.getMetrics().NewTimer({"ledger", "ledger", "normalized-close"}))
     , mLedgerAgeClosed(app.getMetrics().NewBuckets(
           {"ledger", "age", "closed"}, {5000.0, 7000.0, 10000.0, 20000.0}))
     , mLedgerAge(
@@ -733,8 +735,15 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
         std::this_thread::sleep_for(sleepFor);
     }
 
-    std::chrono::duration<double> ledgerTimeSeconds = ledgerTime.Stop();
+    auto ledgerCloseTime = ledgerTime.Stop();
+    std::chrono::duration<double> ledgerTimeSeconds = ledgerCloseTime;
     CLOG_DEBUG(Perf, "Applied ledger in {} seconds", ledgerTimeSeconds.count());
+    if (txs.size() != 0)
+    {
+        auto normalizedLedgerCloseTime =
+            ledgerCloseTime * getLastMaxTxSetSize() / txs.size();
+        mNormalizedLedgerClose.Update(normalizedLedgerCloseTime);
+    }
 }
 
 void
