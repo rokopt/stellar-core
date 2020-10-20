@@ -45,6 +45,7 @@ class BucketManagerImpl : public BucketManager
     medida::Meter& mBucketObjectInsertBatch;
     medida::Timer& mBucketAddBatch;
     medida::Timer& mBucketSnapMerge;
+    medida::Timer& mBucketResolveFutures;
     medida::Counter& mSharedBucketsSize;
     MergeCounters mMergeCounters;
 
@@ -92,6 +93,7 @@ class BucketManagerImpl : public BucketManager
     std::string const& getBucketDir() const override;
     BucketList& getBucketList() override;
     medida::Timer& getMergeTimer() override;
+    medida::Timer& getResolveFuturesTimer() override;
     MergeCounters readMergeCounters() override;
     void incrMergeCounters(MergeCounters const&) override;
     TmpDirManager& getTmpDirManager() override;

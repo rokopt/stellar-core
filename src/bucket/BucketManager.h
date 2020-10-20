@@ -105,6 +105,7 @@ class BucketManager : NonMovableOrCopyable
     virtual BucketList& getBucketList() = 0;
 
     virtual medida::Timer& getMergeTimer() = 0;
+    virtual medida::Timer& getResolveFuturesTimer() = 0;
 
     // Reading and writing the merge counters is done in bulk, and takes a lock
     // briefly; this can be done from any thread.

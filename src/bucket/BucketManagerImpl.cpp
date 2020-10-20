@@ -105,6 +105,8 @@ BucketManagerImpl::BucketManagerImpl(Application& app)
           {"bucket", "batch", "objectsadded"}, "object"))
     , mBucketAddBatch(app.getMetrics().NewTimer({"bucket", "batch", "addtime"}))
     , mBucketSnapMerge(app.getMetrics().NewTimer({"bucket", "snap", "merge"}))
+    , mBucketResolveFutures(
+          app.getMetrics().NewTimer({"bucket", "batch", "resolve-futures"}))
     , mSharedBucketsSize(
           app.getMetrics().NewCounter({"bucket", "memory", "shared"}))
     , mDeleteEntireBucketDirInDtor(app.getConfig().MODE_USES_IN_MEMORY_LEDGER)
@@ -236,6 +238,12 @@ medida::Timer&
 BucketManagerImpl::getMergeTimer()
 {
     return mBucketSnapMerge;
+}
+
+medida::Timer&
+BucketManagerImpl::getResolveFuturesTimer()
+{
+    return mBucketResolveFutures;
 }
 
 MergeCounters
