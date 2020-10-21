@@ -134,6 +134,10 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           app.getMetrics().NewTimer({"ledger", "ledger", "meta-stream-write"}))
     , mNormalizedLedgerClose(
           app.getMetrics().NewTimer({"ledger", "ledger", "normalized-close"}))
+    , mLedgerCloseTimePerTx(
+          app.getMetrics().NewTimer({"ledger", "ledger", "close-per-tx"}))
+    , mFullLedgerClose(app.getMetrics().NewTimer(
+          {"ledger", "ledger", "nearly-full-ledger-close"}))
     , mLedgerAgeClosed(app.getMetrics().NewBuckets(
           {"ledger", "age", "closed"}, {5000.0, 7000.0, 10000.0, 20000.0}))
     , mLedgerAge(
@@ -743,6 +747,18 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
         auto normalizedLedgerCloseTime =
             ledgerCloseTime * getLastMaxTxSetSize() / txs.size();
         mNormalizedLedgerClose.Update(normalizedLedgerCloseTime);
+
+        auto closeTimePerTx = ledgerCloseTime / txs.size();
+        mLedgerCloseTimePerTx.Update(closeTimePerTx);
+
+        ZoneNamedN(closeTimePerTxZone, "Close time per transaction", true);
+        ZoneValueV(closeTimePerTxZone, closeTimePerTx.count());
+    }
+
+    auto constexpr sizePctForFullLedgerMetric = 90;
+    if (txs.size() >= sizePctForFullLedgerMetric * getLastMaxTxSetSize() / 100)
+    {
+        mFullLedgerClose.Update(ledgerCloseTime);
     }
 }
 
