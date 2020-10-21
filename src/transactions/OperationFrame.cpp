@@ -116,6 +116,7 @@ OperationFrame::apply(SignatureChecker& signatureChecker,
                       AbstractLedgerTxn& ltx)
 {
     ZoneScoped;
+    ZoneValue(mOperation.body.type());
     bool res;
     if (Logging::logTrace("Tx"))
     {
@@ -131,6 +132,8 @@ OperationFrame::apply(SignatureChecker& signatureChecker,
         }
     }
 
+    ZoneNamedN(opResult, "OperationFrame apply result", true);
+    ZoneValueV(opResult, mResult.code());
     return res;
 }
 
