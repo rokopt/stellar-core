@@ -134,8 +134,8 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           app.getMetrics().NewTimer({"ledger", "ledger", "meta-stream-write"}))
     , mNormalizedLedgerClose(
           app.getMetrics().NewTimer({"ledger", "ledger", "normalized-close"}))
-    , mLedgerCloseTimePerTx(
-          app.getMetrics().NewTimer({"ledger", "ledger", "close-per-tx"}))
+    , mLedgerCloseTimePerOp(
+          app.getMetrics().NewTimer({"ledger", "ledger", "close-per-op"}))
     , mFullLedgerClose(app.getMetrics().NewTimer(
           {"ledger", "ledger", "nearly-full-ledger-close"}))
     , mLedgerAgeClosed(app.getMetrics().NewBuckets(
@@ -727,8 +727,9 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
     mApp.getBucketManager().forgetUnreferencedBuckets();
 
     // Maybe sleep for parameterized amount of time in simulation mode
+    auto const numOpsInTxSet = txSet->sizeOp();
     auto sleepFor = std::chrono::microseconds{
-        mApp.getConfig().OP_APPLY_SLEEP_TIME_FOR_TESTING * txSet->sizeOp()};
+        mApp.getConfig().OP_APPLY_SLEEP_TIME_FOR_TESTING * numOpsInTxSet};
     std::chrono::microseconds applicationTime =
         closeLedgerTime.checkElapsedTime();
     if (applicationTime < sleepFor)
@@ -742,21 +743,22 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
     auto ledgerCloseTime = ledgerTime.Stop();
     std::chrono::duration<double> ledgerTimeSeconds = ledgerCloseTime;
     CLOG_DEBUG(Perf, "Applied ledger in {} seconds", ledgerTimeSeconds.count());
-    if (txs.size() != 0)
+    auto const maxOpsPerTxSet = getLastMaxTxSetSizeOps();
+    if (numOpsInTxSet != 0)
     {
         auto normalizedLedgerCloseTime =
-            ledgerCloseTime * getLastMaxTxSetSize() / txs.size();
+            ledgerCloseTime * maxOpsPerTxSet / numOpsInTxSet;
         mNormalizedLedgerClose.Update(normalizedLedgerCloseTime);
 
-        auto closeTimePerTx = ledgerCloseTime / txs.size();
-        mLedgerCloseTimePerTx.Update(closeTimePerTx);
+        auto closeTimePerOp = ledgerCloseTime / numOpsInTxSet;
+        mLedgerCloseTimePerOp.Update(closeTimePerOp);
 
-        ZoneNamedN(closeTimePerTxZone, "Close time per transaction", true);
-        ZoneValueV(closeTimePerTxZone, closeTimePerTx.count());
+        ZoneNamedN(closeTimePerOpZone, "Close time per operation", true);
+        ZoneValueV(closeTimePerOpZone, closeTimePerOp.count());
     }
 
     auto constexpr sizePctForFullLedgerMetric = 90;
-    if (txs.size() >= sizePctForFullLedgerMetric * getLastMaxTxSetSize() / 100)
+    if (numOpsInTxSet >= sizePctForFullLedgerMetric * maxOpsPerTxSet / 100)
     {
         mFullLedgerClose.Update(ledgerCloseTime);
     }
