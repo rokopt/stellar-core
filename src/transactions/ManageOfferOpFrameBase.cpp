@@ -11,6 +11,7 @@
 #include "transactions/SponsorshipUtils.h"
 #include "transactions/TransactionUtils.h"
 #include <Tracy.hpp>
+#include <fmt/format.h>
 
 namespace stellar
 {
@@ -210,9 +211,11 @@ bool
 ManageOfferOpFrameBase::doApply(AbstractLedgerTxn& ltxOuter)
 {
     ZoneNamedN(applyZone, "ManageOfferOp apply", true);
-    std::string pairStr = assetToString(mSheep);
-    pairStr += ":";
-    pairStr += assetToString(mWheat);
+    std::string const opTypeStr =
+        mOfferID ? (isDeleteOffer() ? "delete" : "modify") : "create";
+    std::string const pairStr =
+        fmt::format(FMT_STRING("{}:{} ({})"), assetToString(mSheep),
+                    assetToString(mWheat), opTypeStr);
     ZoneTextV(applyZone, pairStr.c_str(), pairStr.size());
 
     LedgerTxn ltx(ltxOuter);
