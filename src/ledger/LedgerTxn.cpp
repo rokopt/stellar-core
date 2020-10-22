@@ -2406,6 +2406,7 @@ LedgerTxnRoot::Impl::prefetch(UnorderedSet<LedgerKey> const& keys)
     cacheResult(bulkLoadData(data));
     cacheResult(bulkLoadClaimableBalance(claimablebalance));
 
+    ZoneValue(total);
     return total;
 }
 
