@@ -3,13 +3,10 @@
 // of this distribution or at http://www.apache.org/licenses/LICENSE-2.0
 
 #include "catchup/ApplyLedgerWork.h"
-#include "bucket/BucketList.h"
-#include "bucket/BucketManager.h"
 #include "ledger/LedgerManager.h"
 #include "main/Application.h"
 #include <Tracy.hpp>
 #include <fmt/format.h>
-#include <medida/timer.h>
 
 namespace stellar
 {
@@ -27,16 +24,6 @@ ApplyLedgerWork::onRun()
 {
     ZoneScoped;
     FrameMark;
-    auto& bm = mApp.getBucketManager();
-    auto& bl = bm.getBucketList();
-    // Separate the timing of waiting for merges from that of closing the
-    // ledger.
-    auto resolveFuturesTime = bm.getResolveFuturesTimer().TimeScope();
-    while (!bl.futuresAllResolved())
-    {
-        bl.resolveAnyReadyFutures();
-    }
-    resolveFuturesTime.Stop();
     mApp.getLedgerManager().closeLedger(mLedgerCloseData);
     return BasicWork::State::WORK_SUCCESS;
 }
