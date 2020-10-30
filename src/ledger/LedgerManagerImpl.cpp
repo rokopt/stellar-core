@@ -128,8 +128,12 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           app.getMetrics().NewTimer({"ledger", "ledger", "tx-apply"}))
     , mLedgerCloseCommit(
           app.getMetrics().NewTimer({"ledger", "ledger", "commit"}))
+    , mPostDBCommitSync(
+          app.getMetrics().NewTimer({"ledger", "ledger", "post-commit-sync"}))
     , mLedgerCloseTransferToBuckets(app.getMetrics().NewTimer(
           {"ledger", "ledger", "transfer-to-buckets"}))
+    , mPreBucketTransferSync(
+          app.getMetrics().NewTimer({"ledger", "ledger", "pre-transfer-sync"}))
     , mLedgerCloseMetaStreamWrite(
           app.getMetrics().NewTimer({"ledger", "ledger", "meta-stream-write"}))
     , mNormalizedLedgerClose(
@@ -717,6 +721,10 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
     ltx.commit();
     ledgerCloseCommitTime.Stop();
 
+    auto postDBCommitSyncTime = mPostDBCommitSync.TimeScope();
+    sync();
+    postDBCommitSyncTime.Stop();
+
     // step 3
     hm.publishQueuedHistory();
     hm.logAndUpdatePublishStatus();
@@ -1079,6 +1087,10 @@ LedgerManagerImpl::ledgerClosed(AbstractLedgerTxn& ltx)
     CLOG_TRACE(Ledger,
                "sealing ledger {} with version {}, sending to bucket list",
                ledgerSeq, ledgerVers);
+
+    auto preBucketTransferSyncTime = mPreBucketTransferSync.TimeScope();
+    sync();
+    preBucketTransferSyncTime.Stop();
 
     auto ledgerCloseTransferToBucketsTime =
         mLedgerCloseTransferToBuckets.TimeScope();
