@@ -112,6 +112,7 @@ TxSimGenerateBucketsWork::processGeneratedBucket()
         level.snap = binToHex(hash);
         mPrevSnap = newBucket;
     }
+    FrameMark;
 }
 
 BasicWork::State
