@@ -1225,7 +1225,6 @@ runGenerateOrSimulateTxs(CommandLineArgs const& args, bool generate)
 
     return runWithHelp(args, parsers, [&] {
         auto config = configOption.getConfig();
-        config.setNoListen();
 
         auto found = config.HISTORY.find("simulate");
         if (!generate)
@@ -1322,7 +1321,6 @@ runSimulateBuckets(CommandLineArgs const& args)
              "skip directly to application if buckets already generated")},
         [&] {
             auto config = configOption.getConfig();
-            config.setNoListen();
 
             std::shared_ptr<HistoryArchiveState> has;
             if (!hasStr.empty())
