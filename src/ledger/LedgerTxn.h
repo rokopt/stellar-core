@@ -13,6 +13,7 @@
 #include <functional>
 #include <ledger/LedgerHashUtils.h>
 #include <map>
+#include <medida/metrics_registry.h>
 #include <memory>
 #include <set>
 
@@ -453,6 +454,8 @@ class AbstractLedgerTxnParent
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     virtual void resetForFuzzer() = 0;
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+
+    virtual medida::MetricsRegistry& getMetrics() = 0;
 };
 
 // An abstraction for an object that is an AbstractLedgerTxnParent and has
@@ -549,6 +552,7 @@ class AbstractLedgerTxn : public AbstractLedgerTxnParent
     //
     // All of these functions throw if the AbstractLedgerTxn has a child.
     virtual LedgerEntryChanges getChanges() = 0;
+    virtual size_t getNumChanges() const = 0;
     virtual LedgerTxnDelta getDelta() = 0;
     virtual void getAllEntries(std::vector<LedgerEntry>& initEntries,
                                std::vector<LedgerEntry>& liveEntries,
@@ -592,6 +596,8 @@ class AbstractLedgerTxn : public AbstractLedgerTxnParent
     // which can only be done after getDeadEntries and getLiveEntries have been
     // called.
     virtual void unsealHeader(std::function<void(LedgerHeader&)> f) = 0;
+
+    virtual medida::MetricsRegistry& getMetrics() = 0;
 };
 
 class LedgerTxn final : public AbstractLedgerTxn
@@ -633,6 +639,8 @@ class LedgerTxn final : public AbstractLedgerTxn
     WorstBestOfferIterator getWorstBestOfferIterator() override;
 
     LedgerEntryChanges getChanges() override;
+
+    size_t getNumChanges() const override;
 
     LedgerTxnDelta getDelta() override;
 
@@ -693,6 +701,8 @@ class LedgerTxn final : public AbstractLedgerTxn
     double getPrefetchHitRate() const override;
     uint32_t prefetch(UnorderedSet<LedgerKey> const& keys) override;
 
+    virtual medida::MetricsRegistry& getMetrics() override;
+
 #ifdef BUILD_TESTS
     UnorderedMap<
         AssetPair,
@@ -711,8 +721,9 @@ class LedgerTxnRoot : public AbstractLedgerTxnParent
     std::unique_ptr<Impl> const mImpl;
 
   public:
-    explicit LedgerTxnRoot(Database& db, size_t entryCacheSize,
-                           size_t bestOfferCacheSize, size_t prefetchBatchSize);
+    explicit LedgerTxnRoot(medida::MetricsRegistry& metrics, Database& db,
+                           size_t entryCacheSize, size_t bestOfferCacheSize,
+                           size_t prefetchBatchSize);
 
     virtual ~LedgerTxnRoot();
 
@@ -760,5 +771,7 @@ class LedgerTxnRoot : public AbstractLedgerTxnParent
 
     uint32_t prefetch(UnorderedSet<LedgerKey> const& keys) override;
     double getPrefetchHitRate() const override;
+
+    medida::MetricsRegistry& getMetrics() override;
 };
 }

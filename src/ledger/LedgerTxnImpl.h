@@ -6,6 +6,7 @@
 #include "ledger/LedgerTxn.h"
 #include "util/RandomEvictionCache.h"
 #include <list>
+#include <medida/metrics_registry.h>
 #ifdef USE_POSTGRES
 #include <iomanip>
 #include <libpq-fe.h>
@@ -472,6 +473,8 @@ class LedgerTxn::Impl
     // - the entry cache may be, but is not guaranteed to be, cleared.
     LedgerEntryChanges getChanges();
 
+    size_t getNumChanges() const;
+
     // getDelta has the basic exception safety guarantee. If it throws an
     // exception, then
     // - the prepared statement cache may be, but is not guaranteed to be,
@@ -584,6 +587,8 @@ class LedgerTxn::Impl
 
     double getPrefetchHitRate() const;
 
+    medida::MetricsRegistry& getMetrics();
+
 #ifdef BUILD_TESTS
     MultiOrderBook const& getOrderBook();
 #endif
@@ -688,6 +693,10 @@ class LedgerTxnRoot::Impl
     std::unique_ptr<soci::transaction> mTransaction;
     AbstractLedgerTxn* mChild;
 
+    medida::MetricsRegistry& mMetrics;
+    medida::Timer& mLoadOfferTimer;
+    medida::Timer& mPopulateCacheTimer;
+
     void throwIfChild() const;
 
     std::shared_ptr<LedgerEntry const> loadAccount(LedgerKey const& key) const;
@@ -776,8 +785,8 @@ class LedgerTxnRoot::Impl
 
   public:
     // Constructor has the strong exception safety guarantee
-    Impl(Database& db, size_t entryCacheSize, size_t bestOfferCacheSize,
-         size_t prefetchBatchSize);
+    Impl(medida::MetricsRegistry& metrics, Database& db, size_t entryCacheSize,
+         size_t bestOfferCacheSize, size_t prefetchBatchSize);
 
     ~Impl();
 
@@ -859,6 +868,8 @@ class LedgerTxnRoot::Impl
     uint32_t prefetch(UnorderedSet<LedgerKey> const& keys);
 
     double getPrefetchHitRate() const;
+
+    medida::MetricsRegistry& getMetrics();
 };
 
 #ifdef USE_POSTGRES

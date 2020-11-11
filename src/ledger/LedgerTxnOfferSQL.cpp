@@ -252,6 +252,7 @@ LedgerTxnRoot::Impl::loadOffers(StatementContext& prep,
                                 std::deque<LedgerEntry>& offers) const
 {
     ZoneScoped;
+    auto loadOfferTimer = mLoadOfferTimer.TimeScope();
     std::string actIDStrKey;
     std::string sellingAsset, buyingAsset;
     std::string extensionStr;

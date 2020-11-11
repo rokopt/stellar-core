@@ -6,12 +6,13 @@
 #include "xdr/Stellar-ledger-entries.h"
 #include "xdrpp/marshal.h"
 #include <algorithm>
+#include <medida/metrics_registry.h>
 
 namespace stellar
 {
 
-InMemoryLedgerTxnRoot::InMemoryLedgerTxnRoot()
-    : mHeader(std::make_unique<LedgerHeader>())
+InMemoryLedgerTxnRoot::InMemoryLedgerTxnRoot(medida::MetricsRegistry& metrics)
+    : mHeader(std::make_unique<LedgerHeader>()), mMetrics(metrics)
 {
 }
 
@@ -140,4 +141,10 @@ InMemoryLedgerTxnRoot::resetForFuzzer()
     abort();
 }
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+
+medida::MetricsRegistry&
+InMemoryLedgerTxnRoot::getMetrics()
+{
+    return mMetrics;
+}
 }

@@ -153,14 +153,14 @@ ApplicationImpl::initialize(bool createNewDB)
 
     if (getConfig().MODE_USES_IN_MEMORY_LEDGER)
     {
-        mLedgerTxnRoot = std::make_unique<InMemoryLedgerTxnRoot>();
+        mLedgerTxnRoot = std::make_unique<InMemoryLedgerTxnRoot>(getMetrics());
         mNeverCommittingLedgerTxn =
             std::make_unique<LedgerTxn>(*mLedgerTxnRoot);
     }
     else
     {
         mLedgerTxnRoot = std::make_unique<LedgerTxnRoot>(
-            *mDatabase, mConfig.ENTRY_CACHE_SIZE,
+            getMetrics(), *mDatabase, mConfig.ENTRY_CACHE_SIZE,
             mConfig.BEST_OFFERS_CACHE_SIZE, mConfig.PREFETCH_BATCH_SIZE);
     }
 

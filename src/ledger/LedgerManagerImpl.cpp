@@ -114,6 +114,8 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
     : mApp(app)
     , mTransactionApply(
           app.getMetrics().NewTimer({"ledger", "transaction", "apply"}))
+    , mTransactionChangeCount(app.getMetrics().NewHistogram(
+          {"ledger", "transaction", "change-count"}))
     , mTransactionCount(
           app.getMetrics().NewHistogram({"ledger", "transaction", "count"}))
     , mOperationCount(
@@ -124,6 +126,10 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
     , mLedgerClose(app.getMetrics().NewTimer({"ledger", "ledger", "close"}))
     , mLedgerClosePrefetch(
           app.getMetrics().NewTimer({"ledger", "ledger", "prefetch"}))
+    , mLedgerTransactionPrefetch(
+          app.getMetrics().NewTimer({"ledger", "transaction", "prefetch"}))
+    , mLedgerClosePreprocess(
+          app.getMetrics().NewTimer({"ledger", "ledger", "preprocess"}))
     , mLedgerCloseTxApply(
           app.getMetrics().NewTimer({"ledger", "ledger", "tx-apply"}))
     , mLedgerCloseCommit(
@@ -611,8 +617,10 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
     auto ledgerPrefetchTime = mLedgerClosePrefetch.TimeScope();
     prefetchTxSourceIds(txs);
     ledgerPrefetchTime.Stop();
+    auto ledgerPreprocessTime = mLedgerClosePreprocess.TimeScope();
     processFeesSeqNums(txs, ltx, txSet->getBaseFee(header.current()),
                        ledgerCloseMeta);
+    ledgerPreprocessTime.Stop();
 
     TransactionResultSet txResultSet;
     txResultSet.results.reserve(txs.size());
@@ -920,6 +928,7 @@ LedgerManagerImpl::prefetchTransactionData(
     std::vector<TransactionFrameBasePtr>& txs)
 {
     ZoneScoped;
+    auto transactionPrefetchTime = mLedgerTransactionPrefetch.TimeScope();
     if (mApp.getConfig().PREFETCH_BATCH_SIZE > 0)
     {
         UnorderedSet<LedgerKey> keys;
@@ -964,6 +973,7 @@ LedgerManagerImpl::applyTransactions(
     {
         ZoneNamedN(txZone, "applyTransaction", true);
         auto txTime = mTransactionApply.TimeScope();
+        auto const preApplyChanges = ltx.getNumChanges();
         TransactionMeta tm(2);
         CLOG_DEBUG(Tx, " tx#{} = {} ops={} txseq={} (@ {})", index,
                    hexAbbrev(tx->getContentsHash()), tx->getNumOperations(),
@@ -974,6 +984,15 @@ LedgerManagerImpl::applyTransactions(
         TransactionResultPair results;
         results.transactionHash = tx->getContentsHash();
         results.result = tx->getResult();
+
+        auto const postApplyChanges = ltx.getNumChanges();
+        assert(preApplyChanges <= postApplyChanges);
+        auto const thisTxChanges = postApplyChanges - preApplyChanges;
+        std::string const zoneText =
+            fmt::format(FMT_STRING("result code: {}; entries changed: {}"),
+                        tx->getResultCode(), thisTxChanges);
+        ZoneTextV(txZone, zoneText.c_str(), zoneText.size());
+        mTransactionChangeCount.Update(static_cast<int64_t>(thisTxChanges));
 
         // First gather the TransactionResultPair into the TxResultSet for
         // hashing into the ledger header.

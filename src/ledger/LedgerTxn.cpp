@@ -19,6 +19,7 @@
 #include "xdr/Stellar-ledger-entries.h"
 #include "xdrpp/marshal.h"
 #include <Tracy.hpp>
+#include <medida/metrics_registry.h>
 #include <soci.h>
 
 namespace stellar
@@ -830,6 +831,12 @@ LedgerTxn::getChanges()
     return getImpl()->getChanges();
 }
 
+size_t
+LedgerTxn::getNumChanges() const
+{
+    return getImpl()->getNumChanges();
+}
+
 LedgerEntryChanges
 LedgerTxn::Impl::getChanges()
 {
@@ -876,6 +883,12 @@ LedgerTxn::Impl::getChanges()
         }
     });
     return changes;
+}
+
+size_t
+LedgerTxn::Impl::getNumChanges() const
+{
+    return mEntry.size();
 }
 
 LedgerTxnDelta
@@ -1074,12 +1087,24 @@ LedgerTxn::queryInflationWinners(size_t maxWinners, int64_t minVotes)
     return getImpl()->queryInflationWinners(maxWinners, minVotes);
 }
 
+medida::MetricsRegistry&
+LedgerTxn::getMetrics()
+{
+    return getImpl()->getMetrics();
+}
+
 std::vector<InflationWinner>
 LedgerTxn::Impl::queryInflationWinners(size_t maxWinners, int64_t minVotes)
 {
     throwIfSealed();
     throwIfChild();
     return getInflationWinners(maxWinners, minVotes);
+}
+
+medida::MetricsRegistry&
+LedgerTxn::Impl::getMetrics()
+{
+    return mParent.getMetrics();
 }
 
 void
@@ -1949,16 +1974,17 @@ LedgerTxn::Impl::WorstBestOfferIteratorImpl::clone() const
 // Implementation of LedgerTxnRoot ------------------------------------------
 size_t const LedgerTxnRoot::Impl::MIN_BEST_OFFERS_BATCH_SIZE = 5;
 
-LedgerTxnRoot::LedgerTxnRoot(Database& db, size_t entryCacheSize,
-                             size_t bestOfferCacheSize,
+LedgerTxnRoot::LedgerTxnRoot(medida::MetricsRegistry& metrics, Database& db,
+                             size_t entryCacheSize, size_t bestOfferCacheSize,
                              size_t prefetchBatchSize)
-    : mImpl(std::make_unique<Impl>(db, entryCacheSize, bestOfferCacheSize,
-                                   prefetchBatchSize))
+    : mImpl(std::make_unique<Impl>(metrics, db, entryCacheSize,
+                                   bestOfferCacheSize, prefetchBatchSize))
 {
 }
 
-LedgerTxnRoot::Impl::Impl(Database& db, size_t entryCacheSize,
-                          size_t bestOfferCacheSize, size_t prefetchBatchSize)
+LedgerTxnRoot::Impl::Impl(medida::MetricsRegistry& metrics, Database& db,
+                          size_t entryCacheSize, size_t bestOfferCacheSize,
+                          size_t prefetchBatchSize)
     : mDatabase(db)
     , mHeader(std::make_unique<LedgerHeader>())
     , mEntryCache(entryCacheSize)
@@ -1966,6 +1992,11 @@ LedgerTxnRoot::Impl::Impl(Database& db, size_t entryCacheSize,
     , mMaxCacheSize(entryCacheSize)
     , mBulkLoadBatchSize(prefetchBatchSize)
     , mChild(nullptr)
+    , mMetrics(metrics)
+    , mLoadOfferTimer(
+          mMetrics.NewTimer({"ledger", "transaction", "load-offer"}))
+    , mPopulateCacheTimer(
+          mMetrics.NewTimer({"ledger", "transaction", "populate-cache"}))
 {
 }
 
@@ -2427,6 +2458,18 @@ LedgerTxnRoot::Impl::getPrefetchHitRate() const
            (mPrefetchMisses + mPrefetchHits);
 }
 
+medida::MetricsRegistry&
+LedgerTxnRoot::getMetrics()
+{
+    return mImpl->getMetrics();
+}
+
+medida::MetricsRegistry&
+LedgerTxnRoot::Impl::getMetrics()
+{
+    return mMetrics;
+}
+
 UnorderedMap<LedgerKey, LedgerEntry>
 LedgerTxnRoot::getAllOffers()
 {
@@ -2544,6 +2587,7 @@ LedgerTxnRoot::Impl::populateEntryCacheFromBestOffers(
     std::deque<LedgerEntry>::const_iterator iter,
     std::deque<LedgerEntry>::const_iterator const& end)
 {
+    auto populateCacheTimer = mPopulateCacheTimer.TimeScope();
     UnorderedSet<LedgerKey> toPrefetch;
     for (; iter != end; ++iter)
     {

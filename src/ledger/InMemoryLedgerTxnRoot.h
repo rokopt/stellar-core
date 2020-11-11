@@ -4,6 +4,7 @@
 #include "util/UnorderedMap.h"
 #include "xdr/Stellar-ledger-entries.h"
 #include <map>
+#include <medida/metrics_registry.h>
 #include <set>
 #include <vector>
 
@@ -20,9 +21,10 @@ namespace stellar
 class InMemoryLedgerTxnRoot : public AbstractLedgerTxnParent
 {
     std::unique_ptr<LedgerHeader> mHeader;
+    medida::MetricsRegistry& mMetrics;
 
   public:
-    InMemoryLedgerTxnRoot();
+    InMemoryLedgerTxnRoot(medida::MetricsRegistry& metrics);
     void addChild(AbstractLedgerTxn& child) override;
     void commitChild(EntryIterator iter, LedgerTxnConsistency cons) override;
     void rollbackChild() override;
@@ -61,5 +63,6 @@ class InMemoryLedgerTxnRoot : public AbstractLedgerTxnParent
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     void resetForFuzzer() override;
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+    medida::MetricsRegistry& getMetrics() override;
 };
 }
