@@ -217,6 +217,7 @@ ManageOfferOpFrameBase::doApply(AbstractLedgerTxn& ltxOuter)
         fmt::format(FMT_STRING("{}:{} ({})"), assetToString(mSheep),
                     assetToString(mWheat), opTypeStr);
     ZoneTextV(applyZone, pairStr.c_str(), pairStr.size());
+    auto timeScope = ltxOuter.getOrCreateOpTimer("manage-offer").TimeScope();
 
     LedgerTxn ltx(ltxOuter);
     if (!checkOfferValid(ltx))

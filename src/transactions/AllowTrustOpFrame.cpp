@@ -33,6 +33,7 @@ bool
 AllowTrustOpFrame::doApply(AbstractLedgerTxn& ltx)
 {
     ZoneNamedN(applyZone, "AllowTrustOp apply", true);
+    auto timeScope = ltx.getOrCreateOpTimer("allow-trust").TimeScope();
     if (ltx.loadHeader().current().ledgerVersion > 2)
     {
         if (mAllowTrust.trustor == getSourceID())

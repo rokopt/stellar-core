@@ -29,6 +29,7 @@ bool
 ChangeTrustOpFrame::doApply(AbstractLedgerTxn& ltx)
 {
     ZoneNamedN(applyZone, "ChangeTrustOp apply", true);
+    auto timeScope = ltx.getOrCreateOpTimer("change-trust").TimeScope();
     auto header = ltx.loadHeader();
     auto issuerID = getIssuer(mChangeTrust.line);
 

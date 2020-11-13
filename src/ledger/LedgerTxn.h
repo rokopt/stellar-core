@@ -456,6 +456,7 @@ class AbstractLedgerTxnParent
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 
     virtual medida::MetricsRegistry& getMetrics() = 0;
+    virtual medida::Timer& getOrCreateOpTimer(std::string const& name) = 0;
 };
 
 // An abstraction for an object that is an AbstractLedgerTxnParent and has
@@ -598,6 +599,7 @@ class AbstractLedgerTxn : public AbstractLedgerTxnParent
     virtual void unsealHeader(std::function<void(LedgerHeader&)> f) = 0;
 
     virtual medida::MetricsRegistry& getMetrics() = 0;
+    virtual medida::Timer& getOrCreateOpTimer(std::string const& name) = 0;
 };
 
 class LedgerTxn final : public AbstractLedgerTxn
@@ -702,6 +704,7 @@ class LedgerTxn final : public AbstractLedgerTxn
     uint32_t prefetch(UnorderedSet<LedgerKey> const& keys) override;
 
     virtual medida::MetricsRegistry& getMetrics() override;
+    virtual medida::Timer& getOrCreateOpTimer(std::string const& name) override;
 
 #ifdef BUILD_TESTS
     UnorderedMap<
@@ -773,5 +776,6 @@ class LedgerTxnRoot : public AbstractLedgerTxnParent
     double getPrefetchHitRate() const override;
 
     medida::MetricsRegistry& getMetrics() override;
+    medida::Timer& getOrCreateOpTimer(std::string const& name) override;
 };
 }

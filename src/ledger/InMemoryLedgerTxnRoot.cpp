@@ -147,4 +147,10 @@ InMemoryLedgerTxnRoot::getMetrics()
 {
     return mMetrics;
 }
+
+medida::Timer&
+InMemoryLedgerTxnRoot::getOrCreateOpTimer(std::string const& name)
+{
+    return stellar::getOrCreateOpTimer(mTimers, getMetrics(), name);
+}
 }

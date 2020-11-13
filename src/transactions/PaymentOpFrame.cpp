@@ -28,6 +28,7 @@ PaymentOpFrame::doApply(AbstractLedgerTxn& ltx)
     ZoneNamedN(applyZone, "PaymentOp apply", true);
     std::string payStr = assetToString(mPayment.asset);
     ZoneTextV(applyZone, payStr.c_str(), payStr.size());
+    auto timeScope = ltx.getOrCreateOpTimer("payment").TimeScope();
 
     // if sending to self XLM directly, just mark as success, else we need at
     // least to check trustlines

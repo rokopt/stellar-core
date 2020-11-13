@@ -27,6 +27,12 @@ populateLoadedEntries(UnorderedSet<LedgerKey> const& keys,
 // up.
 static const double ENTRY_CACHE_FILL_RATIO = 0.5;
 
+using TimerMap = std::unordered_map<std::string, medida::Timer*>;
+
+medida::Timer& getOrCreateOpTimer(TimerMap& timerMap,
+                                  medida::MetricsRegistry& metrics,
+                                  std::string const& name);
+
 class EntryIterator::AbstractImpl
 {
   public:
@@ -588,6 +594,7 @@ class LedgerTxn::Impl
     double getPrefetchHitRate() const;
 
     medida::MetricsRegistry& getMetrics();
+    medida::Timer& getOrCreateOpTimer(std::string const& name);
 
 #ifdef BUILD_TESTS
     MultiOrderBook const& getOrderBook();
@@ -694,6 +701,7 @@ class LedgerTxnRoot::Impl
     AbstractLedgerTxn* mChild;
 
     medida::MetricsRegistry& mMetrics;
+    TimerMap mTimers;
     medida::Timer& mLoadOfferTimer;
     medida::Timer& mPopulateCacheTimer;
 
@@ -870,6 +878,7 @@ class LedgerTxnRoot::Impl
     double getPrefetchHitRate() const;
 
     medida::MetricsRegistry& getMetrics();
+    medida::Timer& getOrCreateOpTimer(std::string const& name);
 };
 
 #ifdef USE_POSTGRES

@@ -55,6 +55,21 @@ populateLoadedEntries(UnorderedSet<LedgerKey> const& keys,
     return res;
 }
 
+medida::Timer&
+getOrCreateOpTimer(TimerMap& timerMap, medida::MetricsRegistry& metrics,
+                   std::string const& name)
+{
+    auto found = timerMap.find(name);
+    if (found != timerMap.end())
+    {
+        return *found->second;
+    }
+    medida::MetricName metricName{"ledger", "operation", name};
+    auto& newTimer = metrics.NewTimer(metricName);
+    timerMap.insert({name, &newTimer});
+    return newTimer;
+}
+
 bool
 operator==(OfferDescriptor const& lhs, OfferDescriptor const& rhs)
 {
@@ -1093,6 +1108,12 @@ LedgerTxn::getMetrics()
     return getImpl()->getMetrics();
 }
 
+medida::Timer&
+LedgerTxn::getOrCreateOpTimer(std::string const& name)
+{
+    return getImpl()->getOrCreateOpTimer(name);
+}
+
 std::vector<InflationWinner>
 LedgerTxn::Impl::queryInflationWinners(size_t maxWinners, int64_t minVotes)
 {
@@ -1105,6 +1126,12 @@ medida::MetricsRegistry&
 LedgerTxn::Impl::getMetrics()
 {
     return mParent.getMetrics();
+}
+
+medida::Timer&
+LedgerTxn::Impl::getOrCreateOpTimer(std::string const& name)
+{
+    return mParent.getOrCreateOpTimer(name);
 }
 
 void
@@ -2468,6 +2495,18 @@ medida::MetricsRegistry&
 LedgerTxnRoot::Impl::getMetrics()
 {
     return mMetrics;
+}
+
+medida::Timer&
+LedgerTxnRoot::getOrCreateOpTimer(std::string const& name)
+{
+    return mImpl->getOrCreateOpTimer(name);
+}
+
+medida::Timer&
+LedgerTxnRoot::Impl::getOrCreateOpTimer(std::string const& name)
+{
+    return stellar::getOrCreateOpTimer(mTimers, getMetrics(), name);
 }
 
 UnorderedMap<LedgerKey, LedgerEntry>
