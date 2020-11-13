@@ -986,13 +986,13 @@ LedgerManagerImpl::applyTransactions(
         results.result = tx->getResult();
 
         auto const postApplyChanges = ltx.getNumChanges();
-        assert(preApplyChanges <= postApplyChanges);
-        auto const thisTxChanges = postApplyChanges - preApplyChanges;
+        int64_t const thisTxChanges =
+            static_cast<int64_t>(postApplyChanges) - preApplyChanges;
         std::string const zoneText =
             fmt::format(FMT_STRING("result code: {}; entries changed: {}"),
                         tx->getResultCode(), thisTxChanges);
         ZoneTextV(txZone, zoneText.c_str(), zoneText.size());
-        mTransactionChangeCount.Update(static_cast<int64_t>(thisTxChanges));
+        mTransactionChangeCount.Update(thisTxChanges);
 
         // First gather the TransactionResultPair into the TxResultSet for
         // hashing into the ledger header.
