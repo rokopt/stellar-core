@@ -2577,6 +2577,7 @@ LedgerTxnRoot::Impl::loadNextBestOffersIntoCache(BestOffersCacheEntryPtr cached,
                                                  Asset const& buying,
                                                  Asset const& selling)
 {
+    ZoneScoped;
     auto& offers = cached->bestOffers;
     if (cached->allLoaded)
     {
@@ -2626,6 +2627,7 @@ LedgerTxnRoot::Impl::populateEntryCacheFromBestOffers(
     std::deque<LedgerEntry>::const_iterator iter,
     std::deque<LedgerEntry>::const_iterator const& end)
 {
+    ZoneScoped;
     auto populateCacheTimer = mPopulateCacheTimer.TimeScope();
     UnorderedSet<LedgerKey> toPrefetch;
     for (; iter != end; ++iter)
