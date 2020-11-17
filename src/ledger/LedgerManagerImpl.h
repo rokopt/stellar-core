@@ -55,7 +55,9 @@ class LedgerManagerImpl : public LedgerManager
     medida::Timer& mLedgerClosePreprocess;
     medida::Timer& mLedgerCloseTxApply;
     medida::Timer& mLedgerCloseCommit;
+    medida::Timer& mLedgerCloseCommitPerEntry;
     medida::Timer& mLedgerCloseTransferToBuckets;
+    medida::Timer& mLedgerCloseTransferToBucketsPerEntry;
     medida::Timer& mLedgerCloseMetaStreamWrite;
     medida::Timer& mNormalizedLedgerClose;
     medida::Timer& mFullLedgerClose;

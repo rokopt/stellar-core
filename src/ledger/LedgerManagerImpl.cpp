@@ -136,8 +136,12 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           app.getMetrics().NewTimer({"ledger", "ledger", "tx-apply"}))
     , mLedgerCloseCommit(
           app.getMetrics().NewTimer({"ledger", "ledger", "commit"}))
+    , mLedgerCloseCommitPerEntry(
+          app.getMetrics().NewTimer({"ledger", "ledger", "commit-per-entry"}))
     , mLedgerCloseTransferToBuckets(app.getMetrics().NewTimer(
           {"ledger", "ledger", "transfer-to-buckets"}))
+    , mLedgerCloseTransferToBucketsPerEntry(app.getMetrics().NewTimer(
+          {"ledger", "ledger", "transfer-to-buckets-per-entry"}))
     , mLedgerCloseMetaStreamWrite(
           app.getMetrics().NewTimer({"ledger", "ledger", "meta-stream-write"}))
     , mNormalizedLedgerClose(
@@ -723,9 +727,15 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
     hm.maybeQueueHistoryCheckpoint();
 
     // step 2
-    auto ledgerCloseCommitTime = mLedgerCloseCommit.TimeScope();
+    auto ledgerCloseCommitTimeScope = mLedgerCloseCommit.TimeScope();
+    auto const changedEntries = ltx.getNumChanges();
     ltx.commit();
-    ledgerCloseCommitTime.Stop();
+    auto const ledgerCloseCommitTime = ledgerCloseCommitTimeScope.Stop();
+    if (changedEntries != 0)
+    {
+        mLedgerCloseCommitPerEntry.Update(ledgerCloseCommitTime /
+                                          changedEntries);
+    }
 
     // step 3
     hm.publishQueuedHistory();
@@ -1102,10 +1112,17 @@ LedgerManagerImpl::ledgerClosed(AbstractLedgerTxn& ltx)
                "sealing ledger {} with version {}, sending to bucket list",
                ledgerSeq, ledgerVers);
 
-    auto ledgerCloseTransferToBucketsTime =
+    auto ledgerCloseTransferToBucketsTimeScope =
         mLedgerCloseTransferToBuckets.TimeScope();
     transferLedgerEntriesToBucketList(ltx, ledgerSeq, ledgerVers);
-    ledgerCloseTransferToBucketsTime.Stop();
+    auto const ledgerCloseTransferToBucketsTime =
+        ledgerCloseTransferToBucketsTimeScope.Stop();
+    auto const changedEntries = ltx.getNumChanges();
+    if (changedEntries != 0)
+    {
+        mLedgerCloseTransferToBucketsPerEntry.Update(
+            ledgerCloseTransferToBucketsTime / changedEntries);
+    }
 
     ltx.unsealHeader([this](LedgerHeader& lh) {
         mApp.getBucketManager().snapshotLedger(lh);
