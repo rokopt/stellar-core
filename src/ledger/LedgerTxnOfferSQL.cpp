@@ -657,6 +657,7 @@ void
 LedgerTxnRoot::Impl::bulkUpsertOffers(std::vector<EntryIterator> const& entries)
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("bulk-upsert-offers").TimeScope();
     ZoneValue(static_cast<int64_t>(entries.size()));
     BulkUpsertOffersOperation op(mDatabase, entries);
     mDatabase.doDatabaseTypeSpecificOperation(op);
@@ -667,6 +668,7 @@ LedgerTxnRoot::Impl::bulkDeleteOffers(std::vector<EntryIterator> const& entries,
                                       LedgerTxnConsistency cons)
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("bulk-delete-offers").TimeScope();
     ZoneValue(static_cast<int64_t>(entries.size()));
     BulkDeleteOffersOperation op(mDatabase, cons, entries);
     mDatabase.doDatabaseTypeSpecificOperation(op);
@@ -843,6 +845,7 @@ UnorderedMap<LedgerKey, std::shared_ptr<LedgerEntry const>>
 LedgerTxnRoot::Impl::bulkLoadOffers(UnorderedSet<LedgerKey> const& keys) const
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("bulk-load-offers").TimeScope();
     ZoneValue(static_cast<int64_t>(keys.size()));
     if (!keys.empty())
     {

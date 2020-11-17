@@ -211,6 +211,8 @@ ApplicationImpl::reportCfgMetrics()
         return;
     }
 
+    syncAllMetrics();
+
     std::set<std::string> metricsToReport;
     std::set<std::string> allMetrics;
     for (auto& kv : mMetrics->GetAllMetrics())

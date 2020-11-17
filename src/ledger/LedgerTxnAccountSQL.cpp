@@ -100,6 +100,8 @@ std::vector<InflationWinner>
 LedgerTxnRoot::Impl::loadInflationWinners(size_t maxWinners,
                                           int64_t minBalance) const
 {
+    ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("load-inflation-winners").TimeScope();
     InflationWinner w;
     std::string inflationDest;
 
@@ -440,6 +442,7 @@ LedgerTxnRoot::Impl::bulkUpsertAccounts(
     std::vector<EntryIterator> const& entries)
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("bulk-upsert-accounts").TimeScope();
     ZoneValue(static_cast<int64_t>(entries.size()));
     BulkUpsertAccountsOperation op(mDatabase, entries);
     mDatabase.doDatabaseTypeSpecificOperation(op);
@@ -450,6 +453,7 @@ LedgerTxnRoot::Impl::bulkDeleteAccounts(
     std::vector<EntryIterator> const& entries, LedgerTxnConsistency cons)
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("bulk-delete-accounts").TimeScope();
     ZoneValue(static_cast<int64_t>(entries.size()));
     BulkDeleteAccountsOperation op(mDatabase, cons, entries);
     mDatabase.doDatabaseTypeSpecificOperation(op);
@@ -657,6 +661,7 @@ LedgerTxnRoot::Impl::bulkLoadAccounts(UnorderedSet<LedgerKey> const& keys) const
     ZoneValue(static_cast<int64_t>(keys.size()));
     if (!keys.empty())
     {
+        auto timeScope = getOrCreateOpTimer("bulk-load-accounts").TimeScope();
         BulkLoadAccountsOperation op(mDatabase, keys);
         return populateLoadedEntries(
             keys, mDatabase.doDatabaseTypeSpecificOperation(op));

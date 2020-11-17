@@ -397,6 +397,7 @@ LedgerTxnRoot::Impl::bulkUpsertTrustLines(
     std::vector<EntryIterator> const& entries)
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("bulk-upsert-trustlines").TimeScope();
     ZoneValue(static_cast<int64_t>(entries.size()));
     BulkUpsertTrustLinesOperation op(mDatabase, entries,
                                      mHeader->ledgerVersion);
@@ -408,6 +409,7 @@ LedgerTxnRoot::Impl::bulkDeleteTrustLines(
     std::vector<EntryIterator> const& entries, LedgerTxnConsistency cons)
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("bulk-delete-trustlines").TimeScope();
     ZoneValue(static_cast<int64_t>(entries.size()));
     BulkDeleteTrustLinesOperation op(mDatabase, cons, entries,
                                      mHeader->ledgerVersion);
@@ -652,6 +654,7 @@ LedgerTxnRoot::Impl::bulkLoadTrustLines(
     UnorderedSet<LedgerKey> const& keys) const
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("bulk-load-trustlines").TimeScope();
     ZoneValue(static_cast<int64_t>(keys.size()));
     if (!keys.empty())
     {
