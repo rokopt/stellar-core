@@ -1224,6 +1224,8 @@ convertWithOffers(
     std::vector<ClaimOfferAtom>& offerTrail, int64_t maxOffersToCross)
 {
     ZoneScoped;
+    auto timeScope =
+        ltxOuter.getOrCreateOpTimer("convert-with-offers").TimeScope();
     std::string pairStr = assetToString(sheep);
     pairStr += ":";
     pairStr += assetToString(wheat);

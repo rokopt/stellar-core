@@ -114,6 +114,8 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
     : mApp(app)
     , mTransactionApply(
           app.getMetrics().NewTimer({"ledger", "transaction", "apply"}))
+    , mTransactionStore(
+          app.getMetrics().NewTimer({"ledger", "transaction", "store"}))
     , mTransactionChangeCount(app.getMetrics().NewHistogram(
           {"ledger", "transaction", "change-count"}))
     , mTransactionCount(
@@ -1020,6 +1022,7 @@ LedgerManagerImpl::applyTransactions(
         ++index;
         if (mApp.getConfig().MODE_STORES_HISTORY)
         {
+            auto storeTime = mTransactionStore.TimeScope();
             auto ledgerSeq = ltx.loadHeader().current().ledgerSeq;
             storeTransaction(mApp.getDatabase(), ledgerSeq, tx, tm,
                              txResultSet);

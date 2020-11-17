@@ -143,13 +143,13 @@ InMemoryLedgerTxnRoot::resetForFuzzer()
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 
 medida::MetricsRegistry&
-InMemoryLedgerTxnRoot::getMetrics()
+InMemoryLedgerTxnRoot::getMetrics() const
 {
     return mMetrics;
 }
 
 medida::Timer&
-InMemoryLedgerTxnRoot::getOrCreateOpTimer(std::string const& name)
+InMemoryLedgerTxnRoot::getOrCreateOpTimer(std::string const& name) const
 {
     return stellar::getOrCreateOpTimer(mTimers, getMetrics(), name);
 }

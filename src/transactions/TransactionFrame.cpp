@@ -422,6 +422,8 @@ TransactionFrame::processSignatures(ValidationType cv,
                                     AbstractLedgerTxn& ltxOuter)
 {
     ZoneScoped;
+    auto timeScope =
+        ltxOuter.getOrCreateOpTimer("process-signatures").TimeScope();
     bool maybeValid = (cv == ValidationType::kMaybeValid);
     uint32_t ledgerVersion = ltxOuter.loadHeader().current().ledgerVersion;
     if (ledgerVersion < 10)
@@ -486,6 +488,7 @@ TransactionFrame::commonValid(SignatureChecker& signatureChecker,
                               uint64_t upperBoundCloseTimeOffset)
 {
     ZoneScoped;
+    auto timeScope = ltxOuter.getOrCreateOpTimer("common-valid").TimeScope();
     LedgerTxn ltx(ltxOuter);
     ValidationType res = ValidationType::kInvalid;
 
@@ -522,12 +525,18 @@ TransactionFrame::commonValid(SignatureChecker& signatureChecker,
 
     res = ValidationType::kInvalidUpdateSeqNum;
 
-    if (!checkSignature(
-            signatureChecker, sourceAccount,
-            sourceAccount.current().data.account().thresholds[THRESHOLD_LOW]))
     {
-        getResult().result.code(txBAD_AUTH);
-        return res;
+        auto timeScope =
+            ltxOuter.getOrCreateOpTimer("common-valid-check-signature")
+                .TimeScope();
+        if (!checkSignature(signatureChecker, sourceAccount,
+                            sourceAccount.current()
+                                .data.account()
+                                .thresholds[THRESHOLD_LOW]))
+        {
+            getResult().result.code(txBAD_AUTH);
+            return res;
+        }
     }
 
     res = ValidationType::kInvalidPostAuth;

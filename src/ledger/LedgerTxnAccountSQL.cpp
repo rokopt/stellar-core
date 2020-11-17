@@ -22,6 +22,7 @@ std::shared_ptr<LedgerEntry const>
 LedgerTxnRoot::Impl::loadAccount(LedgerKey const& key) const
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("load-account").TimeScope();
     std::string actIDStrKey = KeyUtils::toStrKey(key.account().accountID);
 
     std::string inflationDest, homeDomain, thresholds, signers;

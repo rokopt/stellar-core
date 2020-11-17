@@ -593,8 +593,8 @@ class LedgerTxn::Impl
 
     double getPrefetchHitRate() const;
 
-    medida::MetricsRegistry& getMetrics();
-    medida::Timer& getOrCreateOpTimer(std::string const& name);
+    medida::MetricsRegistry& getMetrics() const;
+    medida::Timer& getOrCreateOpTimer(std::string const& name) const;
 
 #ifdef BUILD_TESTS
     MultiOrderBook const& getOrderBook();
@@ -701,7 +701,7 @@ class LedgerTxnRoot::Impl
     AbstractLedgerTxn* mChild;
 
     medida::MetricsRegistry& mMetrics;
-    TimerMap mTimers;
+    TimerMap mutable mTimers;
     medida::Timer& mLoadOfferTimer;
     medida::Timer& mPopulateCacheTimer;
 
@@ -877,8 +877,8 @@ class LedgerTxnRoot::Impl
 
     double getPrefetchHitRate() const;
 
-    medida::MetricsRegistry& getMetrics();
-    medida::Timer& getOrCreateOpTimer(std::string const& name);
+    medida::MetricsRegistry& getMetrics() const;
+    medida::Timer& getOrCreateOpTimer(std::string const& name) const;
 };
 
 #ifdef USE_POSTGRES

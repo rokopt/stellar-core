@@ -56,6 +56,7 @@ std::shared_ptr<LedgerEntry const>
 LedgerTxnRoot::Impl::loadTrustLine(LedgerKey const& key) const
 {
     ZoneScoped;
+    auto timeScope = getOrCreateOpTimer("load-trustline").TimeScope();
     std::string accountIDStr, issuerStr, assetStr;
     getTrustLineStrings(key.trustLine().accountID, key.trustLine().asset,
                         accountIDStr, issuerStr, assetStr,

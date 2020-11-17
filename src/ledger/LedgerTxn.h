@@ -455,8 +455,9 @@ class AbstractLedgerTxnParent
     virtual void resetForFuzzer() = 0;
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 
-    virtual medida::MetricsRegistry& getMetrics() = 0;
-    virtual medida::Timer& getOrCreateOpTimer(std::string const& name) = 0;
+    virtual medida::MetricsRegistry& getMetrics() const = 0;
+    virtual medida::Timer&
+    getOrCreateOpTimer(std::string const& name) const = 0;
 };
 
 // An abstraction for an object that is an AbstractLedgerTxnParent and has
@@ -598,8 +599,9 @@ class AbstractLedgerTxn : public AbstractLedgerTxnParent
     // called.
     virtual void unsealHeader(std::function<void(LedgerHeader&)> f) = 0;
 
-    virtual medida::MetricsRegistry& getMetrics() = 0;
-    virtual medida::Timer& getOrCreateOpTimer(std::string const& name) = 0;
+    virtual medida::MetricsRegistry& getMetrics() const = 0;
+    virtual medida::Timer&
+    getOrCreateOpTimer(std::string const& name) const = 0;
 };
 
 class LedgerTxn final : public AbstractLedgerTxn
@@ -703,8 +705,9 @@ class LedgerTxn final : public AbstractLedgerTxn
     double getPrefetchHitRate() const override;
     uint32_t prefetch(UnorderedSet<LedgerKey> const& keys) override;
 
-    virtual medida::MetricsRegistry& getMetrics() override;
-    virtual medida::Timer& getOrCreateOpTimer(std::string const& name) override;
+    virtual medida::MetricsRegistry& getMetrics() const override;
+    virtual medida::Timer&
+    getOrCreateOpTimer(std::string const& name) const override;
 
 #ifdef BUILD_TESTS
     UnorderedMap<
@@ -775,7 +778,7 @@ class LedgerTxnRoot : public AbstractLedgerTxnParent
     uint32_t prefetch(UnorderedSet<LedgerKey> const& keys) override;
     double getPrefetchHitRate() const override;
 
-    medida::MetricsRegistry& getMetrics() override;
-    medida::Timer& getOrCreateOpTimer(std::string const& name) override;
+    medida::MetricsRegistry& getMetrics() const override;
+    medida::Timer& getOrCreateOpTimer(std::string const& name) const override;
 };
 }

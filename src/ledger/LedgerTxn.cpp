@@ -1103,13 +1103,13 @@ LedgerTxn::queryInflationWinners(size_t maxWinners, int64_t minVotes)
 }
 
 medida::MetricsRegistry&
-LedgerTxn::getMetrics()
+LedgerTxn::getMetrics() const
 {
     return getImpl()->getMetrics();
 }
 
 medida::Timer&
-LedgerTxn::getOrCreateOpTimer(std::string const& name)
+LedgerTxn::getOrCreateOpTimer(std::string const& name) const
 {
     return getImpl()->getOrCreateOpTimer(name);
 }
@@ -1123,13 +1123,13 @@ LedgerTxn::Impl::queryInflationWinners(size_t maxWinners, int64_t minVotes)
 }
 
 medida::MetricsRegistry&
-LedgerTxn::Impl::getMetrics()
+LedgerTxn::Impl::getMetrics() const
 {
     return mParent.getMetrics();
 }
 
 medida::Timer&
-LedgerTxn::Impl::getOrCreateOpTimer(std::string const& name)
+LedgerTxn::Impl::getOrCreateOpTimer(std::string const& name) const
 {
     return mParent.getOrCreateOpTimer(name);
 }
@@ -2486,25 +2486,25 @@ LedgerTxnRoot::Impl::getPrefetchHitRate() const
 }
 
 medida::MetricsRegistry&
-LedgerTxnRoot::getMetrics()
+LedgerTxnRoot::getMetrics() const
 {
     return mImpl->getMetrics();
 }
 
 medida::MetricsRegistry&
-LedgerTxnRoot::Impl::getMetrics()
+LedgerTxnRoot::Impl::getMetrics() const
 {
     return mMetrics;
 }
 
 medida::Timer&
-LedgerTxnRoot::getOrCreateOpTimer(std::string const& name)
+LedgerTxnRoot::getOrCreateOpTimer(std::string const& name) const
 {
     return mImpl->getOrCreateOpTimer(name);
 }
 
 medida::Timer&
-LedgerTxnRoot::Impl::getOrCreateOpTimer(std::string const& name)
+LedgerTxnRoot::Impl::getOrCreateOpTimer(std::string const& name) const
 {
     return stellar::getOrCreateOpTimer(mTimers, getMetrics(), name);
 }

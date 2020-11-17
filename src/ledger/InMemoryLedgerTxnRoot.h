@@ -22,7 +22,7 @@ class InMemoryLedgerTxnRoot : public AbstractLedgerTxnParent
 {
     std::unique_ptr<LedgerHeader> mHeader;
     medida::MetricsRegistry& mMetrics;
-    TimerMap mTimers;
+    TimerMap mutable mTimers;
 
   public:
     InMemoryLedgerTxnRoot(medida::MetricsRegistry& metrics);
@@ -66,5 +66,7 @@ class InMemoryLedgerTxnRoot : public AbstractLedgerTxnParent
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     medida::MetricsRegistry& getMetrics() override;
     medida::Timer& getOrCreateOpTimer(std::string const& name) override;
+    medida::MetricsRegistry& getMetrics() const override;
+    medida::Timer& getOrCreateOpTimer(std::string const& name) const override;
 };
 }
