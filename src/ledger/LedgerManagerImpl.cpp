@@ -697,64 +697,70 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
         }
     }
 
-    auto postApplyWriteTimeScope = mLedgerClosePostApplyWrite.TimeScope();
-
-    ledgerClosed(ltx);
-
-    if (mMetaStream)
     {
-        auto ledgerCloseMetaStreamWriteTime =
-            mLedgerCloseMetaStreamWrite.TimeScope();
-        releaseAssert(ledgerCloseMeta);
-        ledgerCloseMeta->v0().ledgerHeader = mLastClosedLedger;
-        mMetaStream->writeOne(*ledgerCloseMeta);
-        mMetaStream->flush();
-    }
+        ZoneNamedN(closeLedgerPostApplyWrite, "closeLedgerPostApplyWrite",
+                   true);
+        auto postApplyWriteTimeScope = mLedgerClosePostApplyWrite.TimeScope();
 
-    // The next 4 steps happen in a relatively non-obvious, subtle order.
-    // This is unfortunate and it would be nice if we could make it not
-    // be so subtle, but for the time being this is where we are.
-    //
-    // 1. Queue any history-checkpoint to the database, _within_ the current
-    //    transaction. This way if there's a crash after commit and before
-    //    we've published successfully, we'll re-publish on restart.
-    //
-    // 2. Commit the current transaction.
-    //
-    // 3. Start any queued checkpoint publishing, _after_ the commit so that
-    //    it takes its snapshot of history-rows from the committed state, but
-    //    _before_ we GC any buckets (because this is the step where the
-    //    bucket refcounts are incremented for the duration of the publish).
-    //
-    // 4. GC unreferenced buckets. Only do this once publishes are in progress.
+        ledgerClosed(ltx);
 
-    // step 1
-    auto& hm = mApp.getHistoryManager();
-    hm.maybeQueueHistoryCheckpoint();
+        if (mMetaStream)
+        {
+            auto ledgerCloseMetaStreamWriteTime =
+                mLedgerCloseMetaStreamWrite.TimeScope();
+            releaseAssert(ledgerCloseMeta);
+            ledgerCloseMeta->v0().ledgerHeader = mLastClosedLedger;
+            mMetaStream->writeOne(*ledgerCloseMeta);
+            mMetaStream->flush();
+        }
 
-    // step 2
-    auto ledgerCloseCommitTimeScope = mLedgerCloseCommit.TimeScope();
-    auto const changedEntries = ltx.getNumChanges();
-    ltx.commit();
-    auto const ledgerCloseCommitTime = ledgerCloseCommitTimeScope.Stop();
-    if (changedEntries != 0)
-    {
-        mLedgerCloseCommitPerEntry.Update(ledgerCloseCommitTime /
-                                          changedEntries);
-    }
+        // The next 4 steps happen in a relatively non-obvious, subtle order.
+        // This is unfortunate and it would be nice if we could make it not
+        // be so subtle, but for the time being this is where we are.
+        //
+        // 1. Queue any history-checkpoint to the database, _within_ the current
+        //    transaction. This way if there's a crash after commit and before
+        //    we've published successfully, we'll re-publish on restart.
+        //
+        // 2. Commit the current transaction.
+        //
+        // 3. Start any queued checkpoint publishing, _after_ the commit so that
+        //    it takes its snapshot of history-rows from the committed state,
+        //    but _before_ we GC any buckets (because this is the step where the
+        //    bucket refcounts are incremented for the duration of the publish).
+        //
+        // 4. GC unreferenced buckets. Only do this once publishes are in
+        // progress.
 
-    // step 3
-    hm.publishQueuedHistory();
-    hm.logAndUpdatePublishStatus();
+        // step 1
+        auto& hm = mApp.getHistoryManager();
+        hm.maybeQueueHistoryCheckpoint();
 
-    // step 4
-    mApp.getBucketManager().forgetUnreferencedBuckets();
+        // step 2
+        auto ledgerCloseCommitTimeScope = mLedgerCloseCommit.TimeScope();
+        auto const changedEntries = ltx.getNumChanges();
+        ltx.commit();
+        auto const ledgerCloseCommitTime = ledgerCloseCommitTimeScope.Stop();
+        if (changedEntries != 0)
+        {
+            mLedgerCloseCommitPerEntry.Update(ledgerCloseCommitTime /
+                                              changedEntries);
+        }
 
-    auto const postApplyWriteTime = postApplyWriteTimeScope.Stop();
-    if (changedEntries != 0)
-    {
-        mLedgerClosePostApplyWritePerEntry.Update(postApplyWriteTime /
-                                                  changedEntries);
+        // step 3
+        hm.publishQueuedHistory();
+        hm.logAndUpdatePublishStatus();
+
+        // step 4
+        mApp.getBucketManager().forgetUnreferencedBuckets();
+
+        auto const postApplyWriteTime = postApplyWriteTimeScope.Stop();
+        if (changedEntries != 0)
+        {
+            mLedgerClosePostApplyWritePerEntry.Update(postApplyWriteTime /
+                                                      changedEntries);
+        }
+        ZoneValueV(closeLedgerPostApplyWrite, changedEntries);
     }
 
     // Maybe sleep for parameterized amount of time in simulation mode
