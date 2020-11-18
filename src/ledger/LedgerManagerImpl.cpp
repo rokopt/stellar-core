@@ -142,6 +142,10 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           {"ledger", "ledger", "transfer-to-buckets"}))
     , mLedgerCloseTransferToBucketsPerEntry(app.getMetrics().NewTimer(
           {"ledger", "ledger", "transfer-to-buckets-per-entry"}))
+    , mLedgerClosePostApplyWrite(
+          app.getMetrics().NewTimer({"ledger", "ledger", "post-apply-write"}))
+    , mLedgerClosePostApplyWritePerEntry(app.getMetrics().NewTimer(
+          {"ledger", "ledger", "post-apply-write-per-entry"}))
     , mLedgerCloseMetaStreamWrite(
           app.getMetrics().NewTimer({"ledger", "ledger", "meta-stream-write"}))
     , mNormalizedLedgerClose(
@@ -693,6 +697,8 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
         }
     }
 
+    auto postApplyWriteTimeScope = mLedgerClosePostApplyWrite.TimeScope();
+
     ledgerClosed(ltx);
 
     if (mMetaStream)
@@ -743,6 +749,13 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
 
     // step 4
     mApp.getBucketManager().forgetUnreferencedBuckets();
+
+    auto const postApplyWriteTime = postApplyWriteTimeScope.Stop();
+    if (changedEntries != 0)
+    {
+        mLedgerClosePostApplyWritePerEntry.Update(postApplyWriteTime /
+                                                  changedEntries);
+    }
 
     // Maybe sleep for parameterized amount of time in simulation mode
     auto const numOpsInTxSet = txSet->sizeOp();
