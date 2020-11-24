@@ -40,6 +40,8 @@ PathPaymentStrictSendOpFrame::doApply(AbstractLedgerTxn& ltx)
     pathStr += "->";
     pathStr += assetToString(getDestAsset());
     ZoneTextV(applyZone, pathStr.c_str(), pathStr.size());
+    auto timeScope =
+        ltx.getOrCreateOpTimer("path-payment-strict-receive").TimeScope();
 
     setResultSuccess();
 
