@@ -845,10 +845,10 @@ UnorderedMap<LedgerKey, std::shared_ptr<LedgerEntry const>>
 LedgerTxnRoot::Impl::bulkLoadOffers(UnorderedSet<LedgerKey> const& keys) const
 {
     ZoneScoped;
-    auto timeScope = getOrCreateOpTimer("bulk-load-offers").TimeScope();
     ZoneValue(static_cast<int64_t>(keys.size()));
     if (!keys.empty())
     {
+        auto timeScope = getOrCreateOpTimer("bulk-load-offers").TimeScope();
         BulkLoadOffersOperation op(mDatabase, keys);
         return populateLoadedEntries(
             keys, mDatabase.doDatabaseTypeSpecificOperation(op));

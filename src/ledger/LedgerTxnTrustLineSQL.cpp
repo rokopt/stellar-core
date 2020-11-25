@@ -654,10 +654,10 @@ LedgerTxnRoot::Impl::bulkLoadTrustLines(
     UnorderedSet<LedgerKey> const& keys) const
 {
     ZoneScoped;
-    auto timeScope = getOrCreateOpTimer("bulk-load-trustlines").TimeScope();
     ZoneValue(static_cast<int64_t>(keys.size()));
     if (!keys.empty())
     {
+        auto timeScope = getOrCreateOpTimer("bulk-load-trustlines").TimeScope();
         BulkLoadTrustLinesOperation op(mDatabase, keys);
         return populateLoadedEntries(
             keys, mDatabase.doDatabaseTypeSpecificOperation(op));
