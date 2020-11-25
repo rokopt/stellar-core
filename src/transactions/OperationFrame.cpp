@@ -207,6 +207,7 @@ OperationFrame::checkValid(SignatureChecker& signatureChecker,
                            AbstractLedgerTxn& ltxOuter, bool forApply)
 {
     ZoneScoped;
+    auto timeScope = ltxOuter.getOrCreateOpTimer("check-valid").TimeScope();
     // Note: ltx is always rolled back so checkValid never modifies the ledger
     LedgerTxn ltx(ltxOuter);
     auto ledgerVersion = ltx.loadHeader().current().ledgerVersion;
