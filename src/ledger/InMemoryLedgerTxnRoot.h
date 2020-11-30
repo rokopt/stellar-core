@@ -64,8 +64,6 @@ class InMemoryLedgerTxnRoot : public AbstractLedgerTxnParent
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     void resetForFuzzer() override;
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-    medida::MetricsRegistry& getMetrics() override;
-    medida::Timer& getOrCreateOpTimer(std::string const& name) override;
     medida::MetricsRegistry& getMetrics() const override;
     medida::Timer& getOrCreateOpTimer(std::string const& name) const override;
 };
