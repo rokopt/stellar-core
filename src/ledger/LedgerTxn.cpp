@@ -329,6 +329,7 @@ LedgerTxn::commit()
 void
 LedgerTxn::Impl::commit()
 {
+    ZoneNamed(LedgerTxnImplCommit, true);
     maybeUpdateLastModifiedThenInvokeThenSeal([&](EntryMap const& entries) {
         // getEntryIterator has the strong exception safety guarantee
         // commitChild has the strong exception safety guarantee
@@ -359,6 +360,7 @@ joinConsistencyLevels(LedgerTxnConsistency c1, LedgerTxnConsistency c2)
 void
 LedgerTxn::Impl::commitChild(EntryIterator iter, LedgerTxnConsistency cons)
 {
+    ZoneScoped;
     // Assignment of xdrpp objects does not have the strong exception safety
     // guarantee, so use std::unique_ptr<...>::swap to achieve it
     auto childHeader = std::make_unique<LedgerHeader>(mChild->getHeader());
@@ -669,6 +671,7 @@ LedgerTxn::getBestOffer(Asset const& buying, Asset const& selling)
 std::shared_ptr<LedgerEntry const>
 LedgerTxn::Impl::getBestOffer(Asset const& buying, Asset const& selling)
 {
+    ZoneNamed(getBestOfferByAssets, true);
     if (!mActive.empty())
     {
         throw std::runtime_error("active entries when getting best offer");
@@ -773,6 +776,7 @@ std::shared_ptr<LedgerEntry const>
 LedgerTxn::Impl::getBestOffer(Asset const& buying, Asset const& selling,
                               OfferDescriptor const& worseThan)
 {
+    ZoneNamed(getBestOfferByAssetsAndOfferDescriptor, true);
     if (!mActive.empty())
     {
         throw std::runtime_error("active entries when getting best offer");
@@ -1653,6 +1657,7 @@ LedgerTxn::Impl::prefetch(UnorderedSet<LedgerKey> const& keys)
 LedgerTxn::Impl::EntryMap
 LedgerTxn::Impl::maybeUpdateLastModified() const
 {
+    ZoneScoped;
     throwIfSealed();
     throwIfChild();
 
@@ -1875,6 +1880,7 @@ void
 LedgerTxn::Impl::updateWorstBestOffer(
     AssetPair const& assets, std::shared_ptr<OfferDescriptor const> offerDesc)
 {
+    ZoneScoped;
     // Update mWorstBestOffer if
     // - assets is currently not in mWorstBestOffer
     // - offerDesc is worse than mWorstBestOffer[assets]

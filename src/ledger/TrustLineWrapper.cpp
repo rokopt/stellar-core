@@ -8,6 +8,7 @@
 #include "transactions/TransactionUtils.h"
 #include "util/XDROperators.h"
 #include "util/types.h"
+#include <Tracy.hpp>
 
 namespace stellar
 {
@@ -123,12 +124,14 @@ TrustLineWrapper::operator bool() const
 AccountID const&
 TrustLineWrapper::getAccountID() const
 {
+    ZoneScoped;
     return getImpl()->getAccountID();
 }
 
 Asset const&
 TrustLineWrapper::getAsset() const
 {
+    ZoneScoped;
     return getImpl()->getAsset();
 }
 
@@ -147,12 +150,14 @@ TrustLineWrapper::addBalance(LedgerTxnHeader const& header, int64_t delta)
 int64_t
 TrustLineWrapper::getBuyingLiabilities(LedgerTxnHeader const& header)
 {
+    ZoneScoped;
     return getImpl()->getBuyingLiabilities(header);
 }
 
 int64_t
 TrustLineWrapper::getSellingLiabilities(LedgerTxnHeader const& header)
 {
+    ZoneScoped;
     return getImpl()->getSellingLiabilities(header);
 }
 
@@ -160,6 +165,7 @@ int64_t
 TrustLineWrapper::addBuyingLiabilities(LedgerTxnHeader const& header,
                                        int64_t delta)
 {
+    ZoneScoped;
     return getImpl()->addBuyingLiabilities(header, delta);
 }
 
@@ -167,6 +173,7 @@ int64_t
 TrustLineWrapper::addSellingLiabilities(LedgerTxnHeader const& header,
                                         int64_t delta)
 {
+    ZoneScoped;
     return getImpl()->addSellingLiabilities(header, delta);
 }
 

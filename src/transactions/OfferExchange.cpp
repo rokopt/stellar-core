@@ -626,6 +626,7 @@ exchangeV10WithoutPriceErrorThresholds(Price price, int64_t maxWheatSend,
                                        int64_t maxSheepReceive,
                                        RoundingType round)
 {
+    ZoneScoped;
     uint128_t wheatValue =
         calculateOfferValue(price.n, price.d, maxWheatSend, maxSheepReceive);
     uint128_t sheepValue =

@@ -10,6 +10,7 @@
 #include "transactions/TransactionUtils.h"
 #include "util/XDROperators.h"
 #include "util/types.h"
+#include <Tracy.hpp>
 
 using namespace stellar;
 
@@ -744,6 +745,7 @@ removeEntryWithPossibleSponsorship(AbstractLedgerTxn& ltx,
                                    LedgerTxnHeader const& header,
                                    LedgerEntry& le, LedgerTxnEntry& acc)
 {
+    ZoneScoped;
     if (le.ext.v() == 1 && le.ext.v1().sponsoringID)
     {
         // claimable balances are not subentries, so there's no sponsored
