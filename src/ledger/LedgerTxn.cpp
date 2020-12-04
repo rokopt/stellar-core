@@ -2668,25 +2668,11 @@ LedgerTxnRoot::Impl::getBestOffer(Asset const& buying, Asset const& selling,
 
     // Batch-load best offers until an offer worse than *worseThan is found
     // (or until any offer is found if !worseThan)
-    size_t initialBestOffersSize = offers.size();
     auto iter = findIncludedOffer(offers.cbegin(), offers.cend(), worseThan);
     while (iter == offers.cend() && !cached->allLoaded)
     {
         iter = loadNextBestOffersIntoCache(cached, buying, selling);
         iter = findIncludedOffer(iter, offers.cend(), worseThan);
-    }
-
-    // Populate entry cache with upcoming best offers and prefetch associated
-    // accounts and trust lines
-    if (offers.size() != initialBestOffersSize)
-    {
-        // At this point, we know that new offers were loaded. But new offers
-        // will only be loaded if there were no offers worse than *worseThan
-        // in the original list (or if the original list was empty if
-        // !worseThan). In that case, iter must point into the newly loaded
-        // offers so we will never try to prefetch the offers that had been
-        // previously loaded.
-        populateEntryCacheFromBestOffers(iter, offers.cend());
     }
 
     if (iter != offers.cend())
