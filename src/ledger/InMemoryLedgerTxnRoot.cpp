@@ -153,4 +153,10 @@ InMemoryLedgerTxnRoot::getOrCreateOpTimer(std::string const& name) const
 {
     return stellar::getOrCreateOpTimer(mTimers, getMetrics(), name);
 }
+
+size_t
+InMemoryLedgerTxnRoot::getNumChanges() const
+{
+    return 0;
+}
 }

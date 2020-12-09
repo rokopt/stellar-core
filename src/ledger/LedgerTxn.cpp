@@ -907,7 +907,7 @@ LedgerTxn::Impl::getChanges()
 size_t
 LedgerTxn::Impl::getNumChanges() const
 {
-    return mEntry.size();
+    return mParent.getNumChanges();
 }
 
 LedgerTxnDelta
@@ -2221,9 +2221,8 @@ LedgerTxnRoot::Impl::commitChild(EntryIterator iter, LedgerTxnConsistency cons)
                 (bool)iter ? LEDGER_ENTRY_BATCH_COMMIT_SIZE : 0;
             bulkApply(bleca, bufferThreshold, cons);
         }
-        // FIXME: there is no medida historgram for this presently,
-        // but maybe we would like one?
         TracyPlot("ledger.entry.commit", counter);
+        mLastNumChanges = counter;
 
         // NB: we want to clear the prepared statement cache _before_
         // committing; on postgres this doesn't matter but on SQLite the passive
@@ -2501,6 +2500,18 @@ medida::MetricsRegistry&
 LedgerTxnRoot::Impl::getMetrics() const
 {
     return mMetrics;
+}
+
+size_t
+LedgerTxnRoot::getNumChanges() const
+{
+    return mImpl->getNumChanges();
+}
+
+size_t
+LedgerTxnRoot::Impl::getNumChanges() const
+{
+    return mLastNumChanges;
 }
 
 medida::Timer&

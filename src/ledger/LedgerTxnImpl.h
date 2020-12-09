@@ -701,6 +701,7 @@ class LedgerTxnRoot::Impl
     AbstractLedgerTxn* mChild;
 
     medida::MetricsRegistry& mMetrics;
+    size_t mLastNumChanges;
     TimerMap mutable mTimers;
     medida::Timer& mLoadOfferTimer;
     medida::Timer& mPopulateCacheTimer;
@@ -879,6 +880,7 @@ class LedgerTxnRoot::Impl
 
     medida::MetricsRegistry& getMetrics() const;
     medida::Timer& getOrCreateOpTimer(std::string const& name) const;
+    size_t getNumChanges() const;
 };
 
 #ifdef USE_POSTGRES

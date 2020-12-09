@@ -458,6 +458,7 @@ class AbstractLedgerTxnParent
     virtual medida::MetricsRegistry& getMetrics() const = 0;
     virtual medida::Timer&
     getOrCreateOpTimer(std::string const& name) const = 0;
+    virtual size_t getNumChanges() const = 0;
 };
 
 // An abstraction for an object that is an AbstractLedgerTxnParent and has
@@ -554,7 +555,6 @@ class AbstractLedgerTxn : public AbstractLedgerTxnParent
     //
     // All of these functions throw if the AbstractLedgerTxn has a child.
     virtual LedgerEntryChanges getChanges() = 0;
-    virtual size_t getNumChanges() const = 0;
     virtual LedgerTxnDelta getDelta() = 0;
     virtual void getAllEntries(std::vector<LedgerEntry>& initEntries,
                                std::vector<LedgerEntry>& liveEntries,
@@ -780,5 +780,6 @@ class LedgerTxnRoot : public AbstractLedgerTxnParent
 
     medida::MetricsRegistry& getMetrics() const override;
     medida::Timer& getOrCreateOpTimer(std::string const& name) const override;
+    size_t getNumChanges() const override;
 };
 }

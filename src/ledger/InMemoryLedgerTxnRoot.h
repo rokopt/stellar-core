@@ -66,5 +66,6 @@ class InMemoryLedgerTxnRoot : public AbstractLedgerTxnParent
 #endif // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     medida::MetricsRegistry& getMetrics() const override;
     medida::Timer& getOrCreateOpTimer(std::string const& name) const override;
+    size_t getNumChanges() const override;
 };
 }

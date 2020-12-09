@@ -116,8 +116,8 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           app.getMetrics().NewTimer({"ledger", "transaction", "apply"}))
     , mTransactionStore(
           app.getMetrics().NewTimer({"ledger", "transaction", "store"}))
-    , mTransactionChangeCount(app.getMetrics().NewHistogram(
-          {"ledger", "transaction", "change-count"}))
+    , mLedgerChangeCount(
+          app.getMetrics().NewHistogram({"ledger", "ledger", "change-count"}))
     , mTransactionCount(
           app.getMetrics().NewHistogram({"ledger", "transaction", "count"}))
     , mOperationCount(
@@ -140,8 +140,6 @@ LedgerManagerImpl::LedgerManagerImpl(Application& app)
           app.getMetrics().NewTimer({"ledger", "ledger", "commit-per-entry"}))
     , mLedgerCloseTransferToBuckets(app.getMetrics().NewTimer(
           {"ledger", "ledger", "transfer-to-buckets"}))
-    , mLedgerCloseTransferToBucketsPerEntry(app.getMetrics().NewTimer(
-          {"ledger", "ledger", "transfer-to-buckets-per-entry"}))
     , mLedgerClosePostApplyWrite(
           app.getMetrics().NewTimer({"ledger", "ledger", "post-apply-write"}))
     , mLedgerClosePostApplyWritePerEntry(app.getMetrics().NewTimer(
@@ -738,9 +736,11 @@ LedgerManagerImpl::closeLedger(LedgerCloseData const& ledgerData)
 
         // step 2
         auto ledgerCloseCommitTimeScope = mLedgerCloseCommit.TimeScope();
-        auto const changedEntries = ltx.getNumChanges();
         ltx.commit();
         auto const ledgerCloseCommitTime = ledgerCloseCommitTimeScope.Stop();
+        auto const changedEntries =
+            this->mApp.getLedgerTxnRoot().getNumChanges();
+        mLedgerChangeCount.Update(changedEntries);
         if (changedEntries != 0)
         {
             mLedgerCloseCommitPerEntry.Update(ledgerCloseCommitTime /
@@ -1004,7 +1004,6 @@ LedgerManagerImpl::applyTransactions(
     {
         ZoneNamedN(txZone, "applyTransaction", true);
         auto txTime = mTransactionApply.TimeScope();
-        auto const preApplyChanges = ltx.getNumChanges();
         TransactionMeta tm(2);
         CLOG_DEBUG(Tx, " tx#{} = {} ops={} txseq={} (@ {})", index,
                    hexAbbrev(tx->getContentsHash()), tx->getNumOperations(),
@@ -1016,14 +1015,9 @@ LedgerManagerImpl::applyTransactions(
         results.transactionHash = tx->getContentsHash();
         results.result = tx->getResult();
 
-        auto const postApplyChanges = ltx.getNumChanges();
-        int64_t const thisTxChanges =
-            static_cast<int64_t>(postApplyChanges) - preApplyChanges;
         std::string const zoneText =
-            fmt::format(FMT_STRING("result code: {}; entries changed: {}"),
-                        tx->getResultCode(), thisTxChanges);
+            fmt::format(FMT_STRING("result code: {}"), tx->getResultCode());
         ZoneTextV(txZone, zoneText.c_str(), zoneText.size());
-        mTransactionChangeCount.Update(thisTxChanges);
 
         // First gather the TransactionResultPair into the TxResultSet for
         // hashing into the ledger header.
@@ -1134,14 +1128,7 @@ LedgerManagerImpl::ledgerClosed(AbstractLedgerTxn& ltx)
     auto ledgerCloseTransferToBucketsTimeScope =
         mLedgerCloseTransferToBuckets.TimeScope();
     transferLedgerEntriesToBucketList(ltx, ledgerSeq, ledgerVers);
-    auto const ledgerCloseTransferToBucketsTime =
-        ledgerCloseTransferToBucketsTimeScope.Stop();
-    auto const changedEntries = ltx.getNumChanges();
-    if (changedEntries != 0)
-    {
-        mLedgerCloseTransferToBucketsPerEntry.Update(
-            ledgerCloseTransferToBucketsTime / changedEntries);
-    }
+    ledgerCloseTransferToBucketsTimeScope.Stop();
 
     ltx.unsealHeader([this](LedgerHeader& lh) {
         mApp.getBucketManager().snapshotLedger(lh);
