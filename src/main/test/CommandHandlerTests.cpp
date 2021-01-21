@@ -27,6 +27,33 @@ using namespace stellar;
 using namespace stellar::txbridge;
 using namespace stellar::txtest;
 
+static void
+child()
+{
+    ZoneScoped;
+    sleep(1);
+}
+
+static void
+parent(size_t numRecursions)
+{
+    ZoneScoped;
+    if (numRecursions == 0)
+    {
+        child();
+    }
+    else
+    {
+        parent(numRecursions - 1);
+    }
+}
+
+TEST_CASE("Tracy recursive zones")
+{
+    sleep(5); // allow time for Tracy handshake
+    parent(10);
+}
+
 TEST_CASE("transaction envelope bridge", "[commandhandler]")
 {
     VirtualClock clock;
