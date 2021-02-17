@@ -36,6 +36,7 @@ auto constexpr FUZZER_MAX_OPERATIONS = 5;
 auto constexpr INITIAL_ACCOUNT_BALANCE = 1'000'000LL;    // reduced after setup
 auto constexpr INITIAL_ASSET_DISTRIBUTION = 1'000'000LL; // reduced after setup
 auto constexpr NUMBER_OF_ASSETS_TO_ISSUE = 4U;
+auto constexpr NUMBER_OF_ASSETS_TO_USE = 8U;
 auto constexpr FUZZING_FEE = 1;
 auto constexpr FUZZING_RESERVE = 4;
 auto constexpr INITIAL_TRUST_LINE_LIMIT = 5 * INITIAL_ASSET_DISTRIBUTION;
@@ -69,6 +70,12 @@ getShortKey(PublicKey const& pk)
     return getShortKey(pk.ed25519());
 }
 
+void
+setAssetCode4(AssetCode4& code, int digit)
+{
+    strToAssetCode(code, "Ast" + std::to_string(digit));
+}
+
 // constructs an Asset structure for an asset issued by an account id comprised
 // of bytes reading [0,0,...,digit] and an alphanum4 asset code of "Ast + digit"
 Asset
@@ -76,9 +83,18 @@ makeAsset(int digit)
 {
     Asset asset;
     asset.type(ASSET_TYPE_CREDIT_ALPHANUM4);
-    strToAssetCode(asset.alphaNum4().assetCode, "Ast" + std::to_string(digit));
+    setAssetCode4(asset.alphaNum4().assetCode, digit);
     setShortKey(asset.alphaNum4().issuer, digit);
     return asset;
+}
+
+AssetCode
+makeAssetCode(int digit)
+{
+    AssetCode code;
+    code.type(ASSET_TYPE_CREDIT_ALPHANUM4);
+    setAssetCode4(code.assetCode4(), digit);
+    return code;
 }
 
 SequenceNumber
@@ -339,7 +355,9 @@ struct xdr_fuzzer_unpacker
 
     template <typename T>
     typename std::enable_if<(!std::is_same<stellar::AccountID, T>::value &&
-                             !std::is_same<stellar::MuxedAccount, T>::value) &&
+                             !std::is_same<stellar::MuxedAccount, T>::value &&
+                             !std::is_same<stellar::Asset, T>::value &&
+                             !std::is_same<stellar::AssetCode, T>::value) &&
                             (xdr_traits<T>::is_class ||
                              xdr_traits<T>::is_container)>::type
     operator()(T& t)
@@ -364,6 +382,28 @@ struct xdr_fuzzer_unpacker
         check(1);
         std::uint8_t v = get_byte();
         stellar::FuzzUtils::setShortKey(m.ed25519(), v);
+    }
+
+    template <typename T>
+    typename std::enable_if<std::is_same<stellar::Asset, T>::value>::type
+    operator()(T& asset)
+    {
+        // 1 byte --> Asset
+        check(1);
+        std::uint8_t v = get_byte();
+        asset = stellar::FuzzUtils::makeAsset(
+            v % stellar::FuzzUtils::NUMBER_OF_ASSETS_TO_USE);
+    }
+
+    template <typename T>
+    typename std::enable_if<std::is_same<stellar::AssetCode, T>::value>::type
+    operator()(T& code)
+    {
+        // 1 byte --> AssetCode
+        check(1);
+        std::uint8_t v = get_byte();
+        code = stellar::FuzzUtils::makeAssetCode(
+            v % stellar::FuzzUtils::NUMBER_OF_ASSETS_TO_USE);
     }
 
     void
