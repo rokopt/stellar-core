@@ -70,14 +70,14 @@ getShortKey(PublicKey const& pk)
 }
 
 // constructs an Asset structure for an asset issued by an account id comprised
-// of bytes reading [0,0,...,i] and an alphanum4 asset code of "Ast + i"
+// of bytes reading [0,0,...,digit] and an alphanum4 asset code of "Ast + digit"
 Asset
-makeAsset(int i)
+makeAsset(int digit)
 {
     Asset asset;
     asset.type(ASSET_TYPE_CREDIT_ALPHANUM4);
-    strToAssetCode(asset.alphaNum4().assetCode, "Ast" + std::to_string(i));
-    setShortKey(asset.alphaNum4().issuer, i);
+    strToAssetCode(asset.alphaNum4().assetCode, "Ast" + std::to_string(digit));
+    setShortKey(asset.alphaNum4().issuer, digit);
     return asset;
 }
 
