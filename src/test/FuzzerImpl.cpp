@@ -80,6 +80,13 @@ makeAsset(int i)
     setShortKey(asset.alphaNum4().issuer, i);
     return asset;
 }
+
+SequenceNumber
+getSequenceNumber(AbstractLedgerTxn& ltx, PublicKey const& sourceAccountID)
+{
+    auto account = loadAccount(ltx, sourceAccountID);
+    return account.current().data.account().seqNum;
+}
 }
 }
 
@@ -453,8 +460,8 @@ class FuzzTransactionFrame : public TransactionFrame
         // reset results of operations
         resetResults(ltx.getHeader(), 0, true);
 
-        // attempt application of transaction without accounting for sequence
-        // number, processing the fee, or committing the LedgerTxn
+        // attempt application of transaction without processing the fee or
+        // committing the LedgerTxn
         SignatureChecker signatureChecker{
             ltx.loadHeader().current().ledgerVersion, getContentsHash(),
             mEnvelope.v1().signatures};
@@ -471,6 +478,7 @@ class FuzzTransactionFrame : public TransactionFrame
         // protocols < 8, this triggered buggy caching, and potentially may do
         // so in the future
         loadSourceAccount(ltx, ltx.loadHeader());
+        processSeqNum(ltx);
         TransactionMeta tm(2);
         applyOperations(signatureChecker, app, ltx, tm);
         if (getResultCode() == txINTERNAL_ERROR)
@@ -481,7 +489,8 @@ class FuzzTransactionFrame : public TransactionFrame
 };
 
 std::shared_ptr<FuzzTransactionFrame>
-createFuzzTransactionFrame(PublicKey const& sourceAccountID,
+createFuzzTransactionFrame(AbstractLedgerTxn& ltx,
+                           PublicKey const& sourceAccountID,
                            std::vector<Operation>::const_iterator begin,
                            std::vector<Operation>::const_iterator end,
                            Hash const& networkID)
@@ -494,7 +503,7 @@ createFuzzTransactionFrame(PublicKey const& sourceAccountID,
     auto& tx1 = txEnv.v1();
     tx1.tx.sourceAccount = toMuxedAccount(sourceAccountID);
     tx1.tx.fee = 0;
-    tx1.tx.seqNum = 1;
+    tx1.tx.seqNum = FuzzUtils::getSequenceNumber(ltx, sourceAccountID) + 1;
     std::copy(begin, end, std::back_inserter(tx1.tx.operations));
 
     std::shared_ptr<FuzzTransactionFrame> res =
@@ -531,7 +540,7 @@ attemptToApplyOps(LedgerTxn& ltx, PublicKey const& sourceAccount,
                 ? end
                 : begin + MAX_OPS_PER_TX;
         auto txFramePtr =
-            createFuzzTransactionFrame(sourceAccount, beginOpsInThisTx,
+            createFuzzTransactionFrame(ltx, sourceAccount, beginOpsInThisTx,
                                        endOpsInThisTx, app.getNetworkID());
         txFramePtr->attemptApplication(app, ltx);
         beginOpsInThisTx = endOpsInThisTx;
