@@ -5,6 +5,7 @@
 #include "test/FuzzerImpl.h"
 #include "ledger/LedgerTxn.h"
 #include "ledger/TrustLineWrapper.h"
+#include "ledger/test/LedgerTestUtils.h"
 #include "main/Application.h"
 #include "main/Config.h"
 #include "overlay/OverlayManager.h"
@@ -70,6 +71,31 @@ getShortKey(PublicKey const& pk)
     return getShortKey(pk.ed25519());
 }
 
+uint8_t
+getShortKey(ClaimableBalanceID const& balanceID)
+{
+    return balanceID.v0()[0];
+}
+
+uint8_t
+getShortKey(LedgerKey const& key)
+{
+    switch (key.type())
+    {
+    case ACCOUNT:
+        return getShortKey(key.account().accountID);
+    case OFFER:
+        return getShortKey(key.offer().sellerID);
+    case TRUSTLINE:
+        return getShortKey(key.trustLine().accountID);
+    case DATA:
+        return getShortKey(key.data().accountID);
+    case CLAIMABLE_BALANCE:
+        return getShortKey(key.claimableBalance().balanceID);
+    }
+    throw std::runtime_error("Unknown key type");
+}
+
 void
 setAssetCode4(AssetCode4& code, int digit)
 {
@@ -95,6 +121,79 @@ makeAssetCode(int digit)
     code.type(ASSET_TYPE_CREDIT_ALPHANUM4);
     setAssetCode4(code.assetCode4(), digit);
     return code;
+}
+
+void
+generateStoredLedgerKeys(StoredLedgerKeys& keys)
+{
+    size_t constexpr NUM_UNVALIDATED_LEDGER_KEYS = 0x08U;
+    static_assert(NUM_UNVALIDATED_LEDGER_KEYS < NUM_STORED_LEDGER_KEYS,
+                  "No room for valid ledger keys");
+
+    auto const firstUnvalidatedLedgerKey =
+        NUM_STORED_LEDGER_KEYS - NUM_UNVALIDATED_LEDGER_KEYS;
+
+    for (auto index = 0; index < firstUnvalidatedLedgerKey; ++index)
+    {
+        keys[index] =
+            LedgerEntryKey(LedgerTestUtils::generateValidLedgerEntry());
+    }
+
+    for (auto index = firstUnvalidatedLedgerKey; index < NUM_STORED_LEDGER_KEYS;
+         ++index)
+    {
+        size_t const entrySize = 3;
+        keys[index] = autocheck::generator<LedgerKey>()(entrySize);
+    }
+}
+
+void
+storeLedgerKey(StoredLedgerKeys& keys, LedgerKey const& key)
+{
+    auto byte = getShortKey(key);
+    keys[byte % NUM_STORED_LEDGER_KEYS] = key;
+}
+
+void
+storeLedgerKeyIDsForOp(StoredLedgerKeys& keys,
+                       std::shared_ptr<OperationFrame const> opFrame)
+{
+    auto op = opFrame->getOperation();
+    auto const opType = op.body.type();
+
+    // For any operation type that we choose to intercept here, we can add to
+    // the set of stored LedgerKeys any LedgerKey that the operation makes
+    // available for reference by future operations, and give it a short ID by
+    // which future fuzz operations can refer to it (by calling getShortKey()).
+    switch (opType)
+    {
+    case CREATE_ACCOUNT:
+    {
+        storeLedgerKey(
+            keys,
+            accountKey(
+                opFrame->getOperation().body.createAccountOp().destination));
+        break;
+    }
+    case CREATE_CLAIMABLE_BALANCE:
+    {
+        storeLedgerKey(keys,
+                       claimableBalanceKey(opFrame->getResult()
+                                               .tr()
+                                               .createClaimableBalanceResult()
+                                               .balanceID()));
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void
+setShortKey(std::array<LedgerKey, NUM_STORED_LEDGER_KEYS> const& storedKeys,
+            LedgerKey& key, uint8_t byte)
+{
+    key = storedKeys[byte % NUM_STORED_LEDGER_KEYS];
 }
 
 SequenceNumber
@@ -213,10 +312,12 @@ struct xdr_fuzzer_compactor
     }
 
     template <typename T>
-    typename std::enable_if<(!std::is_same<stellar::AccountID, T>::value &&
-                             !std::is_same<stellar::MuxedAccount, T>::value) &&
-                            (xdr_traits<T>::is_class ||
-                             xdr_traits<T>::is_container)>::type
+    typename std::enable_if<
+        (!std::is_same<stellar::AccountID, T>::value &&
+         !std::is_same<stellar::MuxedAccount, T>::value &&
+         !std::is_same<stellar::ClaimableBalanceID, T>::value &&
+         !std::is_same<stellar::LedgerKey, T>::value) &&
+        (xdr_traits<T>::is_class || xdr_traits<T>::is_container)>::type
     operator()(T const& t)
     {
         xdr_traits<T>::save(*this, t);
@@ -243,6 +344,29 @@ struct xdr_fuzzer_compactor
         auto b = stellar::FuzzUtils::getShortKey(ed25519);
         put_bytes(&b, 1);
     }
+
+    template <typename T>
+    typename std::enable_if<
+        std::is_same<stellar::ClaimableBalanceID, T>::value>::type
+    operator()(T const& balanceID)
+    {
+        // Convert ClaimableBalanceID to 1 byte for indexing into an array of
+        // LedgerKeys that have been mentioned in the XDR of fuzzer operations.
+        check(1);
+        auto b = stellar::FuzzUtils::getShortKey(balanceID);
+        put_bytes(&b, 1);
+    }
+
+    template <typename T>
+    typename std::enable_if<std::is_same<stellar::LedgerKey, T>::value>::type
+    operator()(T const& key)
+    {
+        // Convert LedgerKey to 1 byte for indexing into an array of LedgerKeys
+        // that have been mentioned in the XDR of fuzzer operations.
+        check(1);
+        auto b = stellar::FuzzUtils::getShortKey(key);
+        put_bytes(&b, 1);
+    }
 };
 
 template <typename... Args>
@@ -258,17 +382,23 @@ xdr_to_fuzzer_opaque(Args const&... args)
 
 struct xdr_fuzzer_unpacker
 {
+    stellar::FuzzUtils::StoredLedgerKeys mStoredLedgerKeys;
     std::uint8_t const* mCur;
     std::uint8_t const* const mEnd;
 
-    xdr_fuzzer_unpacker(void const* start, void const* end)
-        : mCur(reinterpret_cast<std::uint8_t const*>(start))
+    xdr_fuzzer_unpacker(
+        stellar::FuzzUtils::StoredLedgerKeys const& storedLedgerKeys,
+        void const* start, void const* end)
+        : mStoredLedgerKeys(storedLedgerKeys)
+        , mCur(reinterpret_cast<std::uint8_t const*>(start))
         , mEnd(reinterpret_cast<std::uint8_t const*>(end))
     {
         assert(mCur <= mEnd);
     }
-    xdr_fuzzer_unpacker(msg_ptr const& m)
-        : xdr_fuzzer_unpacker(m->data(), m->end())
+    xdr_fuzzer_unpacker(
+        stellar::FuzzUtils::StoredLedgerKeys const& storedLedgerKeys,
+        msg_ptr const& m)
+        : xdr_fuzzer_unpacker(storedLedgerKeys, m->data(), m->end())
     {
     }
 
@@ -354,12 +484,14 @@ struct xdr_fuzzer_unpacker
     }
 
     template <typename T>
-    typename std::enable_if<(!std::is_same<stellar::AccountID, T>::value &&
-                             !std::is_same<stellar::MuxedAccount, T>::value &&
-                             !std::is_same<stellar::Asset, T>::value &&
-                             !std::is_same<stellar::AssetCode, T>::value) &&
-                            (xdr_traits<T>::is_class ||
-                             xdr_traits<T>::is_container)>::type
+    typename std::enable_if<
+        (!std::is_same<stellar::AccountID, T>::value &&
+         !std::is_same<stellar::MuxedAccount, T>::value &&
+         !std::is_same<stellar::Asset, T>::value &&
+         !std::is_same<stellar::AssetCode, T>::value &&
+         !std::is_same<stellar::ClaimableBalanceID, T>::value &&
+         !std::is_same<stellar::LedgerKey, T>::value) &&
+        (xdr_traits<T>::is_class || xdr_traits<T>::is_container)>::type
     operator()(T& t)
     {
         xdr_traits<T>::load(*this, t);
@@ -406,6 +538,37 @@ struct xdr_fuzzer_unpacker
             v % stellar::FuzzUtils::NUMBER_OF_ASSETS_TO_USE);
     }
 
+    template <typename T>
+    typename std::enable_if<
+        std::is_same<stellar::ClaimableBalanceID, T>::value>::type
+    operator()(T& balanceID)
+    {
+        check(1);
+        std::uint8_t v = get_byte();
+        stellar::LedgerKey key;
+        stellar::FuzzUtils::setShortKey(mStoredLedgerKeys, key, v);
+        // If this one byte indexes a stored LedgerKey for a ClaimableBalanceID,
+        // use that; otherwise just use the byte itself as the balance ID.
+        if (key.type() == stellar::CLAIMABLE_BALANCE)
+        {
+            balanceID = key.claimableBalance().balanceID;
+        }
+        else
+        {
+            balanceID.type(stellar::CLAIMABLE_BALANCE_ID_TYPE_V0);
+            balanceID.v0()[0] = v;
+        }
+    }
+
+    template <typename T>
+    typename std::enable_if<std::is_same<stellar::LedgerKey, T>::value>::type
+    operator()(T& key)
+    {
+        check(1);
+        std::uint8_t v = get_byte();
+        stellar::FuzzUtils::setShortKey(mStoredLedgerKeys, key, v);
+    }
+
     void
     done()
     {
@@ -418,10 +581,11 @@ struct xdr_fuzzer_unpacker
 
 template <typename Bytes, typename... Args>
 auto
-xdr_from_fuzzer_opaque(Bytes const& m, Args&... args)
-    -> decltype(detail::bytes_to_void(m))
+xdr_from_fuzzer_opaque(
+    stellar::FuzzUtils::StoredLedgerKeys const& storedLedgerKeys,
+    Bytes const& m, Args&... args) -> decltype(detail::bytes_to_void(m))
 {
-    xdr_fuzzer_unpacker g(m.data(), m.data() + m.size());
+    xdr_fuzzer_unpacker g(storedLedgerKeys, m.data(), m.data() + m.size());
     xdr_argpack_archive(g, args...);
     g.done();
 }
@@ -734,6 +898,7 @@ void
 TransactionFuzzer::initialize()
 {
     resetRandomSeed();
+    stellar::FuzzUtils::generateStoredLedgerKeys(mStoredLedgerKeys);
     mApp = createTestApplication(mClock, getFuzzConfig(0));
     auto root = TestAccount::createRoot(*mApp);
     mSourceAccountID = root.getPublicKey();
@@ -975,7 +1140,7 @@ TransactionFuzzer::inject(std::string const& filename)
     bins.resize(actual);
     try
     {
-        xdr::xdr_from_fuzzer_opaque(bins, ops);
+        xdr::xdr_from_fuzzer_opaque(mStoredLedgerKeys, bins, ops);
     }
     catch (std::exception const& e)
     {
@@ -1045,6 +1210,7 @@ void
 OverlayFuzzer::initialize()
 {
     resetRandomSeed();
+    stellar::FuzzUtils::generateStoredLedgerKeys(mStoredLedgerKeys);
     auto networkID = sha256(getTestConfig().NETWORK_PASSPHRASE);
     mSimulation = std::make_shared<Simulation>(Simulation::OVER_LOOPBACK,
                                                networkID, getFuzzConfig);
@@ -1100,7 +1266,7 @@ OverlayFuzzer::inject(std::string const& filename)
     bins.resize(actual);
     try
     {
-        xdr::xdr_from_fuzzer_opaque(bins, msg);
+        xdr::xdr_from_fuzzer_opaque(mStoredLedgerKeys, bins, msg);
     }
     catch (...)
     {
