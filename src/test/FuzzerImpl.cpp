@@ -658,6 +658,25 @@ class FuzzTransactionFrame : public TransactionFrame
                          TransactionEnvelope const& envelope)
         : TransactionFrame(networkID, envelope){};
 
+    bool
+    allOpsValid(AbstractLedgerTxn& ltx, SignatureChecker& signatureChecker)
+    {
+        auto isInvalidOperation = [&](auto const& op) {
+            return !op->checkValid(signatureChecker, ltx, false);
+        };
+        return !std::any_of(mOperations.begin(), mOperations.end(),
+                            isInvalidOperation);
+    }
+
+    bool
+    allOpsValid(AbstractLedgerTxn& ltx)
+    {
+        SignatureChecker signatureChecker{
+            ltx.loadHeader().current().ledgerVersion, getContentsHash(),
+            mEnvelope.v1().signatures};
+        return allOpsValid(ltx, signatureChecker);
+    }
+
     void
     attemptApplication(Application& app, AbstractLedgerTxn& ltx)
     {
@@ -670,11 +689,7 @@ class FuzzTransactionFrame : public TransactionFrame
             ltx.loadHeader().current().ledgerVersion, getContentsHash(),
             mEnvelope.v1().signatures};
         // if any ill-formed Operations, do not attempt transaction application
-        auto isInvalidOperation = [&](auto const& op) {
-            return !op->checkValid(signatureChecker, ltx, false);
-        };
-        if (std::any_of(mOperations.begin(), mOperations.end(),
-                        isInvalidOperation))
+        if (!allOpsValid(ltx, signatureChecker))
         {
             return;
         }
