@@ -1215,14 +1215,11 @@ TransactionFuzzer::genFuzz(std::string const& filename)
         for (int i = 0; i < numops; ++i)
         {
             Operation op = gen(FUZZER_INITIAL_CORPUS_OPERATION_GEN_UPPERBOUND);
-            if (!op.sourceAccount)
-            {
-                PublicKey pk;
-                FuzzUtils::setShortKey(
-                    pk, rand_uniform<int>(
-                            0, FuzzUtils::NUMBER_OF_PREGENERATED_ACCOUNTS));
-                op.sourceAccount.activate() = toMuxedAccount(pk);
-            }
+            PublicKey pk;
+            FuzzUtils::setShortKey(
+                pk, rand_uniform<int>(
+                        0, FuzzUtils::NUMBER_OF_PREGENERATED_ACCOUNTS));
+            op.sourceAccount.activate() = toMuxedAccount(pk);
             ops.emplace_back(op);
         }
         auto frame =
