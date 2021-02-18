@@ -1201,13 +1201,13 @@ TransactionFuzzer::genFuzz(std::string const& filename)
     for (int i = 0; i < numops; ++i)
     {
         Operation op = gen(FUZZER_INITIAL_CORPUS_OPERATION_GEN_UPPERBOUND);
-        // Use account 0 for the base cases as it's more likely to be useful
-        // right away.
         if (!op.sourceAccount)
         {
-            PublicKey a0;
-            FuzzUtils::setShortKey(a0, 0);
-            op.sourceAccount.activate() = toMuxedAccount(a0);
+            PublicKey pk;
+            FuzzUtils::setShortKey(
+                pk, rand_uniform<int>(
+                        0, FuzzUtils::NUMBER_OF_PREGENERATED_ACCOUNTS));
+            op.sourceAccount.activate() = toMuxedAccount(pk);
         }
         ops.emplace_back(op);
     }
