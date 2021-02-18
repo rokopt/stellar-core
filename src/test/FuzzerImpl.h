@@ -38,6 +38,8 @@ class TransactionFuzzer : public Fuzzer
     int xdrSizeLimit() override;
 
   private:
+    void createAppAndRootAccount();
+
     VirtualClock mClock;
     std::shared_ptr<Application> mApp;
     PublicKey mSourceAccountID;

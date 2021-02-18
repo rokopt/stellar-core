@@ -910,13 +910,19 @@ std::array<OfferParameters, 24> constexpr orderBookParameters{
      {6, AssetID(4), AssetID(3), 100, 22, 7}}};
 
 void
+TransactionFuzzer::createAppAndRootAccount()
+{
+    mApp = createTestApplication(mClock, getFuzzConfig(0));
+    auto root = TestAccount::createRoot(*mApp);
+    mSourceAccountID = root.getPublicKey();
+}
+
+void
 TransactionFuzzer::initialize()
 {
     resetRandomSeed(1);
     stellar::FuzzUtils::generateStoredLedgerKeys(mStoredLedgerKeys);
-    mApp = createTestApplication(mClock, getFuzzConfig(0));
-    auto root = TestAccount::createRoot(*mApp);
-    mSourceAccountID = root.getPublicKey();
+    createAppAndRootAccount();
 
     resetTxInternalState(*mApp);
     LedgerTxn ltxOuter(mApp->getLedgerTxnRoot());
@@ -1190,6 +1196,9 @@ TransactionFuzzer::xdrSizeLimit()
 void
 TransactionFuzzer::genFuzz(std::string const& filename)
 {
+    createAppAndRootAccount();
+    LedgerTxn ltxOuter(mApp->getLedgerTxnRoot());
+
     resetRandomSeed(std::random_device()());
     std::ofstream out;
     out.exceptions(std::ios::failbit | std::ios::badbit);
@@ -1198,18 +1207,28 @@ TransactionFuzzer::genFuzz(std::string const& filename)
     xdr::xvector<Operation> ops;
     ops.reserve(FuzzUtils::FUZZER_MAX_OPERATIONS);
     auto const numops = rand_uniform<int>(1, FuzzUtils::FUZZER_MAX_OPERATIONS);
-    for (int i = 0; i < numops; ++i)
+    bool allOpsValid = false;
+    while (!allOpsValid)
     {
-        Operation op = gen(FUZZER_INITIAL_CORPUS_OPERATION_GEN_UPPERBOUND);
-        if (!op.sourceAccount)
+        LedgerTxn ltx(ltxOuter);
+        ops.clear();
+        for (int i = 0; i < numops; ++i)
         {
-            PublicKey pk;
-            FuzzUtils::setShortKey(
-                pk, rand_uniform<int>(
-                        0, FuzzUtils::NUMBER_OF_PREGENERATED_ACCOUNTS));
-            op.sourceAccount.activate() = toMuxedAccount(pk);
+            Operation op = gen(FUZZER_INITIAL_CORPUS_OPERATION_GEN_UPPERBOUND);
+            if (!op.sourceAccount)
+            {
+                PublicKey pk;
+                FuzzUtils::setShortKey(
+                    pk, rand_uniform<int>(
+                            0, FuzzUtils::NUMBER_OF_PREGENERATED_ACCOUNTS));
+                op.sourceAccount.activate() = toMuxedAccount(pk);
+            }
+            ops.emplace_back(op);
         }
-        ops.emplace_back(op);
+        auto frame =
+            createFuzzTransactionFrame(ltx, mSourceAccountID, ops.begin(),
+                                       ops.end(), mApp->getNetworkID());
+        allOpsValid = frame->allOpsValid(ltx);
     }
     auto bins = xdr::xdr_to_fuzzer_opaque(ops);
     out.write(reinterpret_cast<char const*>(bins.data()), bins.size());
